@@ -2,11 +2,9 @@
 import os
 import sys
 sys.path += ['./bin']
-import re
-import csv
-import subprocess
 from glob import iglob
-from subprocess import check_call
+# import subprocess
+# from subprocess import check_call
 
 InputPath = './Data'
 
