@@ -6,17 +6,19 @@ from numpy import maximum
 from pandas import (Series,DataFrame, Panel,)
 from pprint import pprint
 
+#define debug version with different input maps for easy testing
+VERSION = "debug1"
 
-# overlap two dataframes
-#http://stackoverflow.com/questions/26876549/in-python-pandas-numpy-how-to-create-a-column-with-the-max-min-value-from-two
-# using np.maxium
+if VERSION == "debug1":  #short test version
+	LANDCOVER='./LU2Travel_Speed_Pan/LU2006ASCII/landcover2006-cut.txt'
+	ROAD='./LU2Travel_Speed_Pan/LU2006ASCII/chrdras-cut.txt'
+elif VERSION == "debug2":#handmade test version
+	LANDCOVER='./LU2Travel_Speed_Pan/LU2006ASCII/landtest.txt'
+	ROAD='./LU2Travel_Speed_Pan/LU2006ASCII/roadtest.txt'
+else:					 #final computation version	
+	LANDCOVER='./LU2Travel_Speed_Pan/LU2006ASCII/landcover2006.txt'    #ascii map
+	ROAD='./LU2Travel_Speed_Pan/LU2006ASCII/chrdras.txt'               #ascii map
 
-#LANDCOVER='./LU2Travel_Speed_Pan/LU2006ASCII/landcover2006.txt'    #ascii map
-#ROAD='./LU2Travel_Speed_Pan/LU2006ASCII/chrdras.txt'               #ascii map
-LANDCOVER='./LU2Travel_Speed_Pan/LU2006ASCII/landcover2006-cut.txt'
-ROAD='./LU2Travel_Speed_Pan/LU2006ASCII/chrdras-cut.txt'
-# LANDCOVER='./LU2Travel_Speed_Pan/LU2006ASCII/landtest.txt'
-# ROAD='./LU2Travel_Speed_Pan/LU2006ASCII/roadtest.txt'
 SPEEDCHART="./LU2Travel_Speed_Pan/nlcd_1992+lu2travel_speed.txt"
 SPEEDMAP="./Data/speedmap.txt"
 
@@ -24,7 +26,8 @@ def asciiMap2DataFrame(file):
     return pd.read_csv(file, skiprows=6, header=None, sep=r"\s+")
     
 class SpeedMap:
-    def __init__(self, landcover_matrix, road_matrix, speedchart):
+    def __init__(self, landcover_matrix, road_matrix, speedchart, landcovermap=LANDCOVER,\
+    						                          speedmap="./Data/speedmap.txt"):
         self.cat_list = []
         self.speed_list = []
         self.projectioninfo_list = []
@@ -36,7 +39,7 @@ class SpeedMap:
         self.roadspeed_matrix = self.cat2speedmap(road_matrix)
         self.finalspeed_matrix = self.overlapspeedmap(self.landcoverspeed_matrix, self.roadspeed_matrix)
 
-        self.outputspeedmap(self.finalspeed_matrix, SPEEDMAP)
+        self.outputspeedmap(self.finalspeed_matrix, landcovermap, speedmap)
         # pprint(self.landcoverspeed_matrix)
         # pprint(self.roadspeed_matrix)
         # pprint(self.finalspeed_matrix)
@@ -75,11 +78,11 @@ class SpeedMap:
     	"""
     	return np.maximum(matrix1, matrix2)
 
-    def outputspeedmap(self, matrix, speedmap):
+    def outputspeedmap(self, matrix, landcovermap, speedmap):
    		"""Copy the header meta information from Landcover map, and output speed matrix to speedmap
    		   @param: matrix is the matrix to be saved in speedmap txt file.
    		"""
-   		with open(LANDCOVER, 'r') as r:
+   		with open(landcovermap, 'r') as r:
    			lines = r.readlines()
    			lines = [l for l in lines[:6]] # 6 is the number of header rows
    			with open(speedmap, 'w') as w:
