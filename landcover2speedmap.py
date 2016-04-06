@@ -10,17 +10,20 @@ from pprint import pprint
 VERSION = "debug1"
 
 if VERSION == "debug1":  #short test version
-	LANDCOVER='./LU2Travel_Speed_Pan/LU2006ASCII/landcover2006-cut.txt'
-	ROAD='./LU2Travel_Speed_Pan/LU2006ASCII/chrdras-cut.txt'
+    LANDCOVER='./LU2Travel_Speed_Pan/LU2006ASCII/landcover2006-cut.txt'
+    ROAD='./LU2Travel_Speed_Pan/LU2006ASCII/chrdras-cut.txt'
+    SPEEDMAP="./Data/speedmap-cut.txt"
 elif VERSION == "debug2":#handmade test version
-	LANDCOVER='./LU2Travel_Speed_Pan/LU2006ASCII/landtest.txt'
-	ROAD='./LU2Travel_Speed_Pan/LU2006ASCII/roadtest.txt'
-else:					 #final computation version	
-	LANDCOVER='./LU2Travel_Speed_Pan/LU2006ASCII/landcover2006.txt'    #ascii map
-	ROAD='./LU2Travel_Speed_Pan/LU2006ASCII/chrdras.txt'               #ascii map
+    LANDCOVER='./LU2Travel_Speed_Pan/LU2006ASCII/landtest.txt'
+    ROAD='./LU2Travel_Speed_Pan/LU2006ASCII/roadtest.txt'
+    SPEEDMAP="./Data/speedmaptest.txt"
+else:                    #final computation version 
+    LANDCOVER='./LU2Travel_Speed_Pan/LU2006ASCII/landcover2006.txt'    #ascii map
+    ROAD='./LU2Travel_Speed_Pan/LU2006ASCII/chrdras.txt'               #ascii map
+    SPEEDMAP="./Data/speedmap.txt"
 
 SPEEDCHART="./LU2Travel_Speed_Pan/nlcd_1992+lu2travel_speed.txt"
-SPEEDMAP="./Data/speedmap.txt"
+
 
 def asciiMap2DataFrame(file):
     return pd.read_csv(file, skiprows=6, header=None, sep=r"\s+")
@@ -57,9 +60,9 @@ class SpeedMap:
                 speed = speed.split('\r\n')[0] 
                 self.cat_list.append(int(cat))
                 self.speed_list.append(int(speed))
-        # if catgory is not defined , the speed is 0
+        # if catgory is not defined , the speed is 0.1 and will never be 0
         self.cat_list.append(None) 
-        self.speed_list.append(0)
+        self.speed_list.append(0.1)
     
     def cat2speedmap(self, matrix):
     	"""Replace the catgory values not in the matrix to be None, and then replace

@@ -2,6 +2,7 @@
 from StringIO import StringIO
 import numpy as np
 import pandas as pd
+import math
 from numpy import maximum
 from pandas import (Series,DataFrame, Panel,)
 from pprint import pprint
@@ -36,87 +37,147 @@ DIRP = 0.5						#possibility to go to pre-selected direction
 DIROPP = 0.1 					#possibility to go to the opposite direction of pre-selected direction
 DIRSIDEP = 1-(DIRP-DIROPP)/2    #possibility to go to the other two directions
 
+def min(x, y):
+    if math.isnan(x):
+        return y
+    if math.isnan(y):
+        return x
+    if x < y:
+        return x
+    else:
+        return y
+    
+
 class RandomWalk():
     def __init__(self, cellx, celly, speedmap, cellsize=CELLSIZE, maxcost=MAXCOST, \
     dir="NW", dirP=DIRP, dirsideP=DIRSIDEP, diropP=DIROPP):
         """ Random Walk from one cell on a given map
         @param: cellx and celly is the curretn position x and y indexies in speedmap.
-        speedmap is a matrix with speed value in each cell.
+        speedmap is a matrix with speed value meters/min in each cell and each cell is 30 meters.
                 cellsize is the length of each cell.
                 maxcost is the termiantion cost from current cell doing stocastic greedy random walk.
                 dirP is the probabilty that goes for a pre-selected direction.
                 dirsideP is the probabilty that goes for the two directions near pre-selected direction.
                 diropP is the proabiltiy taht goes for the opposite direction of pre-selected direction.
                 """
+        # W: west, N: north, E: east, S:South
         self.speedmap=speedmap
-        self.cellx=cellx                           #distance to left boundary   (steps of moves)
-        self.celly=celly                           #distance to top boundary    (steps of moves)
+        self.cellx=cellx                           #initial starting cell x index
+        self.celly=celly                           #initial starting cell y index
+        self.distW = cellx                         #current cell x index
+        self.distN = celly                         #current cell y index
         self.distancetuple = self.speedmap.shape
-        self.distright = self.distancetuple[0]-1   #distance to right boundary  (steps of moves)
-        self.distbottom = self.distancetuple[1]-1  #distance to bottom boundary (steps of moves)
+        self.indexlen = self.distancetuple[1]
+        self.columnlen = self.distancetuple[0]
         self.dirP=dirP
         self.dirsideP=dirsideP
         self.diropP=diropP
         self.maxcost=maxcost
         self.cellsize=cellsize
-        #pprint(self.speedmap)
+        ####################
+        self.costmap = pd.DataFrame(index=range(self.indexlen), columns=range(self.columnlen)) #initialize costmap with nan
         self.makeonemove()
-        
-        # for i in xrange(5):
-        #     for j in xrange(7):
-        #         print self.speedmap.iloc[i,j],
-        #     print "\n",
-        
+
     def makeonemove(self):
-        distleft = self.cellx
-        disttop = self.celly
-        distright = self.distright
-        distbottom = self.distbottom
-        speedleft = speedtop = speedright = speedbottom = 0
-        pleft = ptop = pright = pbottom = 0
-        if (distleft!= 0):
-            speedleft = self.speedmap.iloc[distleft-1, disttop]
-            pleft = 1
-        if (disttop!= 0):
-            speedtop  = self.speedmap.iloc[distleft, disttop-1]
-            ptop = 1
-        if (distright!= 0):
-            speedright = self.speedmap.iloc[distleft+1, disttop]
-            pright = 1
-        if (distbottom!= 0):
-            speedbottom = self.speedmap.iloc[distleft, disttop+1]
-            pbottom = 1
+        # === fetch current cell data ===
+        distN = self.distN                         #distance to top boundary   (steps of moves)
+        distS = self.indexlen-1                    #distance to right boundary  (steps of moves)
+        distW = self.distW                         #distance to left boundary   (steps of moves) 
+        distE = self.columnlen-1                   #distance to bottom boundary (steps of moves)
         
-        speedsum = speedleft + speedtop + speedright + speedbottom
-        p_list = [pleft*speedleft/speedsum, pright*speedtop/speedsum, ptop*speedright/speedsum, pbottom*speedbottom/speedsum]
-        #choose 1 value out of 4 values with p_list as possibility distribution
-        move = np.random.choice(4, 1, p=p_list)[0]
-        if move == 0:             #move to left
-            self.cellx -= 1
-            self.distright += 1
-        elif move == 1:           #move to top
-            self.celly -= 1
-            self.distbottom += 1
-        elif move == 2:           #move to right
-            self.cellx += 1
-            self.distright -= 1
-        else:                     #move to bottom
-            self.celly += 1
-            self.distbottom -= 1
-        print self.cellx, self.celly, self.distright, self.distbottom
+        #print distW, distN, distE, distS
         
+        # if not meet the boundary, assign the speed in speed map,
+        # and assign speed to be 0 otherwise.
+        speedW = speedN = speedE = speedS = 0
+        speedNW = speedNE = speedSW = speedSE = 0
+        speedC = self.speedmap.iloc[distW, distN]
+        if distN != 0:
+            speedN = self.speedmap.iloc[distW-1, distN]
+        if distS != 0: 
+            speedS = self.speedmap.iloc[distW+1, distN]
+        if distW != 0: 
+            speedW = self.speedmap.iloc[distW, distN-1]
+        if distE != 0: 
+            speedE = self.speedmap.iloc[distW, distN+1]
+            
+        if distN != 0 and distW != 0: 
+            speedNW = self.speedmap.iloc[distW-1, distN-1]
+        if distN != 0 and distE != 0:
+            speedNE = self.speedmap.iloc[distW-1, distN+1]
+        if distS != 0 and distW != 0:
+            speedSW = self.speedmap.iloc[distW+1, distN-1]
+        if distS != 0 and distE != 0:  
+            speedSE = self.speedmap.iloc[distW+1, distN+1]
+             
+        #print speedN, speedS, speedW, speedE, speedNW, speedNE, speedSW, speedSE, speedC
+        
+        # === caculate probability list ===
+        #speedsum will never be 0
+        speedsum = (speedN + speedS + speedW + speedE + speedNW + speedNE + speedSW + speedSE)*1.0
+        
+        #p_list is the possiblity list to go which direction from current cell
+        try:
+            p_list = [speedN/speedsum,  speedS/speedsum,  speedW/speedsum,  speedE/speedsum, \
+                      speedNW/speedsum, speedNE/speedsum, speedSW/speedsum, speedSE/speedsum]
+        except ZeroDivisionError:
+            p_list = [0.125, 0.125, 0.125, 0.125, 0.125, 0.125, 0.125, 0.125]
+            print "divide by zero"
+            
+        # === decide which direction to move ===
+        #choose 1 value out of 8 values with p_list with possibility distribution
+        move = np.random.choice(8, 1, p=p_list)[0]
+
+        if move == 0:             #move to north
+            self.distN -= 1
+            speedCnew = speedN
+        elif move == 1:           #move to south
+            self.distN += 1
+            speedCnew = speedS
+        elif move == 2:           #move to west
+            self.distW -= 1
+            speedCnew = speedW
+        elif move == 3:           #move to east
+            self.distW += 1
+            speedCnew = speedE
+        elif move == 4:           #move to northwest
+            self.distN -= 1
+            self.distW -= 1
+            speedCnew = speedNW
+        elif move == 5:           #move to northeast
+            self.distN -= 1
+            self.distW += 1
+            speedCnew = speedNE
+        elif move == 6:           #move to southwest
+            self.distN += 1
+            self.distW -= 1
+            speedCnew = speedSW
+        else:                     #move to southeast
+            self.distN += 1
+            self.distW += 1
+            speedCnew = speedSE
+            
+        if move < 4:
+            traveldisthalf = 30/2.0
+        else:
+            traveldisthalf = 30*math.sqrt(2.0)/2.0
+    
+        try:
+            traveltime = traveldisthalf/speedC + traveldisthalf/speedCnew
+        except ZeroDivisionError:
+            traveltime = float("nan")
+            print "divide by zero"
+            
+        #print move, self.distW, self.distN, speedC, speedCnew, traveltime
+        
+        # === update the cost map ===
+        #update the travel time/cost from initial cell to current cell ()
+        #only if the current cost is smaller than the previous one
+        self.costmap.iloc[self.distW, self.distN] = min(self.costmap.iloc[distW, distN], traveltime)
 
 def main():
     speedmap = pd.read_csv(SPEEDMAP, skiprows=6, header=None, sep=r"\s+")
-    RandomWalk(0,0,speedmap)
-    # walk_list = np.cumsum(np.random.uniform(0, 1, (100,2)))
-    # X, Y = np.transpose(walk_list)[0:2]
-    # pprint(X)
-    # pprint(Y)
-    # pylab.figure(figsize=(8,8))
-    # pylab.plot(X,Y)
-    # pylab.axis('equal')
-    # pylab.show()
+    RandomWalk(1,1,speedmap)
 
 if __name__ == "__main__":
     main()
