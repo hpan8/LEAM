@@ -10,9 +10,9 @@ from pprint import pprint
 VERSION = "debug1"
 
 if VERSION == "debug1":  #short test version
-    LANDCOVER='./LU2Travel_Speed_Pan/LU2006ASCII/landcover2006-cut.txt'
-    ROAD='./LU2Travel_Speed_Pan/LU2006ASCII/chrdras-cut.txt'
-    SPEEDMAP="./Data/speedmap-cut.txt"
+    LANDCOVER='./LU2Travel_Speed_Pan/LU2006ASCII/landcover2006.txt'
+    ROAD='./LU2Travel_Speed_Pan/LU2006ASCII/chrdras.txt'
+    SPEEDMAP="./Data/speedmap-cut-test.txt"
 elif VERSION == "debug2":#handmade test version
     LANDCOVER='./LU2Travel_Speed_Pan/LU2006ASCII/landtest.txt'
     ROAD='./LU2Travel_Speed_Pan/LU2006ASCII/roadtest.txt'
@@ -26,11 +26,15 @@ SPEEDCHART="./LU2Travel_Speed_Pan/nlcd_1992+lu2travel_speed.txt"
 
 
 def asciiMap2DataFrame(file):
-    return pd.read_csv(file, skiprows=6, header=None, sep=r"\s+")
+    df = pd.read_csv(file, skiprows=6, header=None, sep=r"\s+")
+    if VERSION == "debug1":
+        return df.ix[0:100, 50:88]
+    else:
+        return df
     
 class SpeedMap:
     def __init__(self, landcover_matrix, road_matrix, speedchart, landcovermap=LANDCOVER,\
-    						                          speedmap="./Data/speedmap.txt"):
+    						                          speedmap=SPEEDMAP):
         self.cat_list = []
         self.speed_list = []
         self.projectioninfo_list = []
@@ -41,7 +45,7 @@ class SpeedMap:
         self.landcoverspeed_matrix = self.cat2speedmap(landcover_matrix)
         self.roadspeed_matrix = self.cat2speedmap(road_matrix)
         self.finalspeed_matrix = self.overlapspeedmap(self.landcoverspeed_matrix, self.roadspeed_matrix)
-
+        
         self.outputspeedmap(self.finalspeed_matrix, landcovermap, speedmap)
         # pprint(self.landcoverspeed_matrix)
         # pprint(self.roadspeed_matrix)
@@ -82,15 +86,16 @@ class SpeedMap:
     	return np.maximum(matrix1, matrix2)
 
     def outputspeedmap(self, matrix, landcovermap, speedmap):
-   		"""Copy the header meta information from Landcover map, and output speed matrix to speedmap
-   		   @param: matrix is the matrix to be saved in speedmap txt file.
-   		"""
-   		with open(landcovermap, 'r') as r:
-   			lines = r.readlines()
-   			lines = [l for l in lines[:6]] # 6 is the number of header rows
-   			with open(speedmap, 'w') as w:
-   				w.writelines(lines)
-   		matrix.to_csv(path_or_buf=speedmap, sep=' ', index=False, header=False, mode = 'a') # append
+        """Copy the header meta information from Landcover map, and output speed matrix to speedmap
+           @param: matrix is the matrix to be saved in speedmap txt file.
+        """
+        with open(landcovermap, 'r') as r:
+            lines = r.readlines()
+            lines = [l for l in lines[:6]] # 6 is the number of header rows
+            with open(speedmap, 'w') as w:
+                w.writelines(lines)
+        matrix.to_csv(path_or_buf=speedmap, sep=' ', index=False, header=False, mode = 'a') # append
+
 
     def printdict(self, dict):
 		for key, value in dict.iteritems():
