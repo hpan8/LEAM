@@ -1,11 +1,14 @@
 #!/usr/bin/env python
-from StringIO import StringIO
+import os
+import sys
+import math
+import logging
 import numpy as np
 import pandas as pd
-import math
 from numpy import maximum
 from pandas import (Series,DataFrame, Panel,)
 from pprint import pprint
+from centermap2indexlist import centermap2indexlist
 
 """
 This script will do:
@@ -16,34 +19,42 @@ This script will do:
    		        assign probabiltiy dirsideP which is less than half of (1-dirP) to the two directions nearby (eg. NE, SW), 
    		        and assign (1-dirP-2*dirsideP) to the opposite direction of the intended direction.
    We will experiment on the dirP and dirsideP values.
-
-reference: 
-[1]http://pages.physics.cornell.edu/~sethna/StatMech/ComputerExercises/PythonSoftware/RandomWalk.py
-[2]https://mktstk.wordpress.com/2015/01/05/simulating-correlated-random-walks-with-copulas/
-[3]Viswanathan, Viswa, Anup K. Sen, and Soumyakanti Chakraborty. "Stochastic Greedy Algorithms." 
-   International Journal on Advances in Software Volume 4, Number 1 & 2, 2011 (2011).
 """
 
 DEBUG = 2
 if DEBUG == 1:
     SPEEDMAP = "./Data/speedmaptest_1.txt"
     TRAVELCOSTMAP = "./Data/travelcostmaptest_#.txt"
-    TRAVELPATHMAP = "./Data/travelpathmaptest_#.txt"
 elif DEBUG == 2:
     SPEEDMAP = "./Data/speedmap-cut.txt"
-    TRAVELCOSTMAP = "./Data/travelcostmap-cut.txt"
-    TRAVELPATHMAP = "./Data/travelpathmap-cut.txt"
+    TRAVELCOSTPATH = "./Data/costmaps"
+    TRAVELCOSTMAP = "travelcostmap-cut.txt"
 else:
     SPEEDMAP = "./Data/speedmap.txt"
     TRAVELCOSTMAP = "./Data/travelcostmap.txt"
-    TRAVELPATHMAP = "./Data/travelpathmap.txt"
+
 
 CELLSIZE = 30 #meters
 MAXCOST = 120 #minutes
-DIRP = 0.4                              #possibility to go to pre-selected direction, e.g. N
+MAXMOVE = 1000 #cell
+REPEATTIMES = 100
+DIRP = 0.3                              #possibility to go to pre-selected direction, e.g. N
 DIRNEARP = 0.2                          #possibiltiy to go to the two directions near the selected e.g.NW and NE
-DIRSIDEP = 0.1                          #possibiltiy to go to the two directions at 90 degree difference e.g.W and E
-DIROPP = 1-(DIRP+2*DIRNEARP+2*DIRSIDEP) #possibility to go to the other directions. e.g. S, SW, and SE
+DIRSIDEP = 0.12                         #possibiltiy to go to the two directions at 90 degree difference e.g.W and E
+DIROPP = 1-(DIRP+2*DIRNEARP+2*DIRSIDEP) #possibility to go to the other directions. e.g. S, SW, and SE #this should not be set to 0
+
+
+def createdirectorynotexist(fname):
+    """Create a directory if the directory does not exist.
+       @param: fname is the full file path name
+       @reference:[http://stackoverflow.com/questions/12517451/python-automatically-creating-directories-with-file-output]
+    """
+    if not os.path.exists(os.path.dirname(fname)):
+        try:
+            os.makedirs(os.path.dirname(fname))
+        except OSError as exc: #Guard against race condition
+            if exc.errno != errno.EEXIST:
+                raise
 
 def min(x, y):
     if math.isnan(x):
@@ -57,18 +68,24 @@ def min(x, y):
     
 
 class RandomWalk():
-    def __init__(self, cellx, celly, speedmap, travelcostmap, dirname="SE", maxcost=MAXCOST, \
-        cellsize=CELLSIZE, dirP=DIRP, dirnearP = DIRNEARP, dirsideP=DIRSIDEP, diropP=DIROPP):
+    def __init__(self, cellx, celly, speedmap=SPEEDMAP, travelcostpath=TRAVELCOSTPATH, travelcostmap=TRAVELCOSTMAP, 
+        maxcost=MAXCOST, maxmove=MAXMOVE, repeattimes=REPEATTIMES, cellsize=CELLSIZE, 
+        dirP=DIRP, dirnearP = DIRNEARP, dirsideP=DIRSIDEP, diropP=DIROPP):
         """ Random Walk from one cell on a given map
+        Update dirlist for walking in each direction.
+        Update repeatcost and costaccumulated for each 2hrs move.
         @param: cellx and celly is the curretn position x and y indexies in speedmap.
         speedmap is a matrix with speed value meters/min in each cell and each cell is 30 meters.
                 cellsize is the length of each cell.
                 maxcost is the termiantion cost from current cell doing stocastic greedy random walk.
+                maxmove is the maximum number of cells to move before termination.
+                repeattimes is the times for each cell to conduct maxcost walks in each direction.
                 dirP is the probabilty that goes for a pre-selected direction.
                 dirsideP is the probabilty that goes for the two directions near pre-selected direction.
                 diropP is the proabiltiy taht goes for the opposite direction of pre-selected direction.
                 """
         # W: west, N: north, E: east, S:South
+        #read in values
         self.speedmatrix=pd.read_csv(speedmap, skiprows=6, header=None, sep=r"\s+")
         self.cellx=cellx                           #initial starting cell x index
         self.celly=celly                           #initial starting cell y index
@@ -79,19 +96,37 @@ class RandomWalk():
         self.columnlen = self.distancetuple[1]
         self.maxcost=maxcost
         self.cellsize=cellsize
-        ####################
-        self.dirlist = self.getdirlist(dirname, dirP, dirnearP, dirsideP, diropP)
+        self.outfileheader = self.extractheader(speedmap)
+        
+        #initiliaze parameters
         self.costmap = pd.DataFrame(index=range(self.indexlen), columns=range(self.columnlen)) #initialize costmap with nan
+        self.costmap = self.costmap.fillna(999)                                                               #initialize costmap with 999
         self.costmap.iloc[self.celly, self.cellx] = 0 # set the starting point cost to be 0
-        self.debugmovepathmap = pd.DataFrame(index=range(self.indexlen), columns=range(self.columnlen))
-        self.debugmovepathmap.iloc[self.celly, self.cellx] = 0
-        self.movecount = 0
         self.costaccumulated = 0
         self.travelpathlist = []
-        self.move2hrs()
-        self.outputmap(self.costmap, speedmap, travelcostmap)
-        self.outputmap(self.debugmovepathmap, speedmap, TRAVELPATHMAP)
-    
+        self.movelist = []
+        self.repeatcost = 0
+
+        self.walkeachdirection(travelcostpath, travelcostmap, repeattimes, dirP, dirnearP, dirsideP, diropP)
+
+    def walkeachdirection(self, travelcostpath, travelcostmap, repeattimes, dirP, dirnearP, dirsideP, diropP):
+        dirname = "SE"
+        count = 0
+        seedbase = self.cellx * self.celly
+        np.random.seed(seedbase)
+        for i in range(repeattimes): # try the converge times=repeattimes
+            count += 1
+            self.dirlist = self.getdirlist(dirname, dirP, dirnearP, dirsideP, diropP)
+            self.move2hrs()
+            outcostfilename = self.outfilename(travelcostpath, travelcostmap, dirname, count)
+            self.outputmap(self.costmap, outcostfilename)
+
+    def outfilename(self, path, fname, dirname, count):
+        """Modify filename "file.txt" to be "cell0_0/file_0_0_SE1.txt" for starting cell (0,0) on the first 2hrs run.
+        """
+        return path + "/cell" + "_" + str(self.cellx) + "_" + str(self.celly) + "/" + fname[:-4]\
+                             + "_" + str(self.cellx) +"_" + str(self.celly) + "_" +dirname + str(count) + ".txt"
+
     def getdirlist(self, dirname, dirP, dirnearP, dirsideP, diropP):
         """ @input: dirname:  a direction name string
                     dirP:     possiblity to move to the selected direction 
@@ -131,14 +166,15 @@ class RandomWalk():
         
         
     def move2hrs(self):
+        self.repeatcost = 0 
+        self.costaccumulated = 0
         for i in range(100):  # it is necessary to set up the upper number of moves
                                # otherwise, in a small map, it may never exceed maxcost and not stop
-            if self.costaccumulated < self.maxcost:   
+            if self.costaccumulated < self.maxcost:
                 self.makeonemove()
-        print "costmap: \n", self.costmap.fillna(999)
-        #print "movepath:\n", self.debugmovepathmap.fillna(-1)
-        self.costmap = self.costmap.fillna(999)
-        self.debugmovepathmap = self.debugmovepathmap.fillna(-1)
+            else:
+                break
+
         print self.travelpathlist
                
     
@@ -183,10 +219,11 @@ class RandomWalk():
         #direction weight list, the direction has more probabiltiy are assigned a larger weight
         weightlist = [speedN*pl[0], speedS*pl[1], speedW*pl[2], speedE*pl[3], \
                    speedNW*pl[4], speedNE*pl[5], speedSW*pl[6], speedSE*pl[7]]
+        print weightlist
         #normalization_factor will never be 0
         normfactor = (weightlist[0] + weightlist[1] + weightlist[2] + weightlist[3] + \
                     weightlist[4] + weightlist[5] + weightlist[6] + weightlist[7])
-        
+        print normfactor
         #p_list is the possiblity list to go which direction from current cell. 
         #p_list = weightlist/normalization_factor
         try:
@@ -196,11 +233,12 @@ class RandomWalk():
             p_list = [0.125, 0.125, 0.125, 0.125, 0.125, 0.125, 0.125, 0.125]
             print "divide by zero"
             
-        #print p_list
+        print p_list
             
         # === decide which direction to move ===
         #choose 1 value out of 8 values with p_list with possibility distribution
         move = np.random.choice(8, 1, p=p_list)[0]
+        self.movelist.append(move)
 
         if move == 0:             #move to north
             self.distN -= 1
@@ -252,27 +290,53 @@ class RandomWalk():
         costNew = min(self.costmap.iloc[self.distN, self.distW], traveltime+costC)
         self.costaccumulated = costNew
         self.costmap.iloc[self.distN, self.distW] = costNew
-        self.movecount += 1
-        
-        self.debugmovepathmap.iloc[self.distN, self.distW] = self.movecount
+
         self.travelpathlist.append((self.distN, self.distW))
+
+        # # count the number of continous walking in the region have walked before with the same cost
+        # if costNew == self.costmap.iloc[self.distN, self.distW]:
+        #     self.repeatcost += 1
+        # else:
+        #     self.repeatcost = 0
         
         #print "costaccumulated: ", self.costaccumulated
+
+    def extractheader(self, speedmap):
+        with open(speedmap, 'r') as r:
+            lines = r.readlines()
+            lines = [l for l in lines[:6]] # 6 is the number of header rows
+            return lines
         
-    def outputmap(self, matrix, speedmap, travelcostmap):
-   		"""Copy the header meta information from speedmap, and output travelcost/travelpath matrix to map
-   		   @param: matrix is the matrix to be saved in outputfile, a .txt file.
-   		"""
-   		with open(speedmap, 'r') as r:
-   			lines = r.readlines()
-   			lines = [l for l in lines[:6]] # 6 is the number of header rows
-   			with open(travelcostmap, 'w') as w:
-   				w.writelines(lines)
-   		matrix.to_csv(path_or_buf=travelcostmap, sep=' ', index=False, header=False, mode = 'a') # append
+    def outputmap(self, matrix, travelcostmap):
+        """Copy the header meta information from speedmap, and output travelcost/travelpath matrix to map
+           @param: matrix is the matrix to be saved in outputfile, a .txt file.
+        """
+        # if travelcostmap's path directory does not exist, creat the directory.
+        createdirectorynotexist(travelcostmap)
+        with open(travelcostmap, 'w') as w:
+            w.writelines(self.outfileheader)
+        matrix.to_csv(path_or_buf=travelcostmap, sep=' ', index=False, header=False, mode = 'a') # append
             
-        
-def main():
-    RandomWalk(0,0,SPEEDMAP, TRAVELCOSTMAP, "SE") #distW, distN
+
+
+def main(argv):
+    cellnum = int(sys.argv[1])
+    if cellnum > 100:
+        print "Error: the cellnum choice should be less than 100"
+        exit(0)
+
+    (disW, disN, weight) = centermap2indexlist('./Data/toppopascii.txt')[cellnum]
+    disN = 3
+
+    # redirect stdout to log file
+    logname = "./Data/costmaps/cell_" + str(disW) + "_" + str(disN) + "/log.txt"
+    createdirectorynotexist(logname)
+    sys.stdout = open(logname, 'w')
+
+    RandomWalk(disW,disN) #distW, distN
 
 if __name__ == "__main__":
-    main()
+    if len(sys.argv) < 2:
+        print "Error: Need an argument less than 101 as cellnum choice."
+        exit(0)
+    main(sys.argv[1:])

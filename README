@@ -1,4 +1,15 @@
+
+Required packages:
+
+python 2.7
+pandas
+numpy
+
+To install, can use pip install
+
+
 run the program by 'sh run.sh'
 
 the grass raster maps are saved in ./grass/model and ./Data
 the final speed map is saved in ./Data
+the travel cost maps are saved in ./Data/costmaps
