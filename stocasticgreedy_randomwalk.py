@@ -107,10 +107,19 @@ class RandomWalk():
         self.movelist = []
         self.repeatcost = 0
 
-        self.walkeachdirection(travelcostpath, travelcostmap, repeattimes, dirP, dirnearP, dirsideP, diropP)
+        self.walk8directions(travelcostpath, travelcostmap, repeattimes, dirP, dirnearP, dirsideP, diropP)
 
-    def walkeachdirection(self, travelcostpath, travelcostmap, repeattimes, dirP, dirnearP, dirsideP, diropP):
-        dirname = "SE"
+    def walk8directions(self, travelcostpath, travelcostmap, repeattimes, dirP, dirnearP, dirsideP, diropP):
+        self.walkeachdirection("N",travelcostpath, travelcostmap, repeattimes, dirP, dirnearP, dirsideP, diropP)
+        self.walkeachdirection("NE",travelcostpath, travelcostmap, repeattimes, dirP, dirnearP, dirsideP, diropP)
+        self.walkeachdirection("E",travelcostpath, travelcostmap, repeattimes, dirP, dirnearP, dirsideP, diropP)
+        self.walkeachdirection("SE",travelcostpath, travelcostmap, repeattimes, dirP, dirnearP, dirsideP, diropP)
+        self.walkeachdirection("S",travelcostpath, travelcostmap, repeattimes, dirP, dirnearP, dirsideP, diropP)
+        self.walkeachdirection("SW",travelcostpath, travelcostmap, repeattimes, dirP, dirnearP, dirsideP, diropP)
+        self.walkeachdirection("W",travelcostpath, travelcostmap, repeattimes, dirP, dirnearP, dirsideP, diropP)
+        self.walkeachdirection("NW",travelcostpath, travelcostmap, repeattimes, dirP, dirnearP, dirsideP, diropP)
+
+    def walkeachdirection(self, dirname, travelcostpath, travelcostmap, repeattimes, dirP, dirnearP, dirsideP, diropP):
         count = 0
         seedbase = self.cellx * self.celly
         np.random.seed(seedbase)
