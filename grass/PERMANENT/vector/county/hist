@@ -1,8 +1,0 @@
-COMMAND: v.in.ogr dsn="/home/su-ywkim/county.shp" output="county" min_area=0.0001 snap=-1
-GISDBASE: /home/su-ywkim/
-LOCATION: grass MAPSET: PERMANENT USER: su-ywkim DATE: Thu Apr  2 09:05:25 2015
------------------------------------------------------
-1 input polygons
-Total area: 1.34201E+10 (1 areas)
-Overlapping area: 0 (0 areas)
-Area without category: 0 (0 areas)

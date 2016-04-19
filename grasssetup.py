@@ -22,10 +22,6 @@ def grass_config(location, mapset, gisbase='/usr/local/grass-6.4.5svn', gisdbase
     from grass.script.setup import init
     gisrc = init(gisbase, gisdbase, location, mapset)    
 
-# def setregion(n, s, w, e): #doesn' work
-#     if grass.run_command('g.region', n=n, s=s, w=w, e=e, res=30):
-#         raise RuntimeError('unable to set region info ')
-
 def import_rastermap(pathname, fname):
     """Import a raster layer into GRASS
     Note that we need a PERMANENT folder in grass folder that has pre-setted projection
@@ -47,53 +43,69 @@ def import_rastermap(pathname, fname):
     if grass.run_command('r.info', map=fname):
         raise RuntimeError('unable to print region info ' + fname)
 
-# def import_vectormap(pathname, fname, layer=''):
-#     """Import a vector layer into GRASS.
-#     Note that we need a PERMANENT folder in grass folder that has pre-setted projection
-#     information prepared before importing vectormap - shapefile.
-#     """
-#     if grass.find_file(fname)['name']:
-#         grass.run_command('g.remove', flags='f', rast=fname)
-#     infilename = pathname + fname + '.shp'
+def import_vectormap(pathname, layername):
+    """Import a vector layer into GRASS. The reion is set to the vector map with 30 meters resolution.
+       @param: pathname is the directory where vectormap is
+       @layername: the input vector files folder and also the imported layer name.
+    """
+    # remove prior exisiting raster and vector layers
+    if grass.run_command('g.remove', rast=layername, vect=layername):
+        raise RuntimeError('unable to clear prior raster and vector file: ' + layername)
 
-#     # remove temporary previously projected shape files
-#     for f in iglob('proj.*'):
-#         os.remove(f)
+    # set the region to fit the current vector file with 30 meters resotluion
+    if grass.run_command('g.region', flags='d', res=30):
+        raise RuntimeError('unable to set region ')
 
-#     proj = grass.read_command('g.proj', flags='wf')
+    # import vector map
+    if grass.run_command('v.in.ogr', flags='o', dsn=layername,
+            snap='0.01', output=layername, overwrite=True, quiet=True):
+        raise RuntimeError('unable to import vectormap ' + layername)
 
-#     check_call(['ogr2ogr', '-t_srs', proj, 'proj.shp', fname])
-#     clean_fields('proj.shp')
+    # print vector map data column names
+    if grass.run_command('v.db.connect', map=layername, flags='c'):
+        raise RuntimeError('unable to print info of vectormap ' + layername)
 
-#     if grass.run_command('v.in.ogr', flags='w', dsn='proj.shp',
-#            snap='0.01', output=fname, overwrite=True, quiet=True):
-#         raise RuntimeError('unable to import vectormap ' + fname)
-#     # if grass.run_command('v.in.ogr', input=infilename, output=fname, 
-#     #         overwrite=True, quiet=True):
-#     #     raise RuntimeError('unable to import vectormap ' + fname)
-#     for f in iglob('proj.*'):
-#         os.remove(f)
-
-#     if grass.run_command('r.info', flags='g'):
-#         raise RuntimeError('unable to print region info ' + fname)
-
-def printregioninfo():
-    if grass.run_command('g.region', flags='p'):
-        raise RuntimeError('unable to print region info')
+def vector2raster(layername):
+    """Transform  the TOTAL_POP column value that is larger than 1000 in the vector layer to raster layer.
+       @param: layername is the vector layer to be transformed to the raster form of this layer.
+       Note that it is required to have "TOTAL_POP" column in the vector file.
+       //TODO: allow user to select which column name to select from vector map.
+    """
+    layer1000 = layername + "1000"
+    if grass.run_command('v.extract', input=layername, output=layer1000, overwrite=True,
+        where='TOTAL_POP>=1000'):
+        raise RuntimeError('unable to convert vector to raster: ' + layername)
+    if grass.run_command('v.to.rast', input=layer1000, output=layername, overwrite=True,
+        use='attr', column='TOTAL_POP'):
+        raise RuntimeError('unable to convert vector to raster: ' + layername)
 
 def export_asciimap(layername):
-    """Export a raster layer into asciimap
+    """Export a raster layer into asciimap. The output folder is 'Data/'.
+       @param: layername is the raster layer name.
     """
     outfilename = 'Data/'+layername+'.txt'
     if grass.run_command('r.out.ascii', input=layername, output=outfilename):
-        raise RuntimeError('unable to export ascii map ' + fname)
+        raise RuntimeError('unable to export ascii map ' + layername)
+    # outfilename = 'Data/'+layername+'.tiff'
+    # if grass.run_command('r.out.tiff', input=layername, output=outfilename):
+    #     raise RuntimeError('unable to export tiff map ' + layername)    
 
 def main():
     grass_config('grass', 'model')
 
-    #import_rastermap('Data/','landcover')
-    #import_vectormap('Data/Population','Top100Pop')
-    #printregioninfo()
+    POPCENTERMAP = 'pop_center'
+    EMPCENTERMAP = 'emp_centers5'
+
+    # transform population centers vector files to ascii map with 2010 population data.
+    import_vectormap('Data/pop_center', POPCENTERMAP)
+    vector2raster(POPCENTERMAP)
+    export_asciimap(POPCENTERMAP)
+
+    # transform employment centers vector files to ascii map with 2010 population data.
+    import_vectormap('Data/emp_centers5', EMPCENTERMAP)
+    vector2raster(EMPCENTERMAP)
+    export_asciimap(EMPCENTERMAP)
+
 
 if __name__ == "__main__":
 	main()

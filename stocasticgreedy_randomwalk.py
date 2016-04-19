@@ -12,18 +12,22 @@ from centermap2indexlist import centermap2indexlist
 
 """
 This script will do:
-1) genearate stocastic greedy random walk with probility distribution according to the speed in the nearby cells.
-2) optimize random walk to similualte real world walking by assign a direction distribution. 
+1) use centermap2indexlist.py to read centerlist and select one according to user input. (about 34.3seconds, 58 percent CPU usage)
+2) genearate stocastic greedy random walk with probility distribution according to the speed in the nearby cells.
+3) optimize random walk to similualte real world walking by assign a direction distribution. 
    For example, assign one direction out of 4 directions: NW, NE, SW, SE initially. Then,
    		        assign a probabiltiy dirP to the intended direction (eg. NW),
    		        assign probabiltiy dirsideP which is less than half of (1-dirP) to the two directions nearby (eg. NE, SW), 
    		        and assign (1-dirP-2*dirsideP) to the opposite direction of the intended direction.
-   We will experiment on the dirP and dirsideP values.
+4) This scripts generate 800 maps for the selected cell with the last map as the final travel cost map: NW100
+   Map generation for 5 steps takes about 31.85 seconds with 60 percent CPU usage.
+   To obtain a travelcost map for one cell, it takes at least 800*31.85 = 25480 seconds ~= 424 min ~= 7hrs.
 """
 
-DEBUG = 2
+DEBUG = 3
 if DEBUG == 1:
     SPEEDMAP = "./Data/speedmaptest_1.txt"
+    TRAVELCOSTPATH = "./Data/costmaps"
     TRAVELCOSTMAP = "./Data/travelcostmaptest_#.txt"
 elif DEBUG == 2:
     SPEEDMAP = "./Data/speedmap-cut.txt"
@@ -31,6 +35,7 @@ elif DEBUG == 2:
     TRAVELCOSTMAP = "travelcostmap-cut.txt"
 else:
     SPEEDMAP = "./Data/speedmap.txt"
+    TRAVELCOSTPATH = "./Data/costmaps"
     TRAVELCOSTMAP = "./Data/travelcostmap.txt"
 
 
@@ -107,9 +112,16 @@ class RandomWalk():
         self.movelist = []
         self.repeatcost = 0
 
+        # select a seed for this cell to parallize the travelcost maps for each cell.
+        # The seed of this cell is the product of the x and y axis positions of this cell.
+        seedbase = self.cellx * self.celly
+        np.random.seed(seedbase)
+
         self.walk8directions(travelcostpath, travelcostmap, repeattimes, dirP, dirnearP, dirsideP, diropP)
 
     def walk8directions(self, travelcostpath, travelcostmap, repeattimes, dirP, dirnearP, dirsideP, diropP):
+        """Walk in each of the 8 directions. 
+        """
         self.walkeachdirection("N",travelcostpath, travelcostmap, repeattimes, dirP, dirnearP, dirsideP, diropP)
         self.walkeachdirection("NE",travelcostpath, travelcostmap, repeattimes, dirP, dirnearP, dirsideP, diropP)
         self.walkeachdirection("E",travelcostpath, travelcostmap, repeattimes, dirP, dirnearP, dirsideP, diropP)
@@ -120,9 +132,12 @@ class RandomWalk():
         self.walkeachdirection("NW",travelcostpath, travelcostmap, repeattimes, dirP, dirnearP, dirsideP, diropP)
 
     def walkeachdirection(self, dirname, travelcostpath, travelcostmap, repeattimes, dirP, dirnearP, dirsideP, diropP):
+        """Walk in one direction for <repeattimes> times. Each time generate an updated cost map
+           that has accumulated result of previous runs.
+           First get the direction probability distribution and then move 2hrs.
+           Last, call outcostfilename to output the files into Data/costmaps folder.
+        """
         count = 0
-        seedbase = self.cellx * self.celly
-        np.random.seed(seedbase)
         for i in range(repeattimes): # try the converge times=repeattimes
             count += 1
             self.dirlist = self.getdirlist(dirname, dirP, dirnearP, dirsideP, diropP)
@@ -180,8 +195,11 @@ class RandomWalk():
         for i in range(100):  # it is necessary to set up the upper number of moves
                                # otherwise, in a small map, it may never exceed maxcost and not stop
             if self.costaccumulated < self.maxcost:
+                print "costaccumulated: " + str(self.costaccumulated)
                 self.makeonemove()
             else:
+                print "exceed maxcost"
+                print "costaccumulated: " + str(self.costaccumulated)
                 break
 
         print self.travelpathlist
@@ -334,9 +352,8 @@ def main(argv):
         print "Error: the cellnum choice should be less than 100"
         exit(0)
 
-    (disW, disN, weight) = centermap2indexlist('./Data/toppopascii.txt')[cellnum]
-    disN = 3
-
+    (disW, disN, weight) = centermap2indexlist('./Data/pop_center.txt')[cellnum]
+    
     # redirect stdout to log file
     logname = "./Data/costmaps/cell_" + str(disW) + "_" + str(disN) + "/log.txt"
     createdirectorynotexist(logname)
