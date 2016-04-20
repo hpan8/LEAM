@@ -43,7 +43,7 @@ class SpeedMap:
         # replace the landcover catogory values with speed values
         self.landcover_matrix = landcover_matrix
         self.landcoverspeed_matrix = self.cat2speedmap(landcover_matrix)
-        self.roadspeed_matrix = self.cat2speedmap(road_matrix)
+        self.roadspeed_matrix = road_matrix #self.cat2speedmap(road_matrix)
         self.finalspeed_matrix = self.overlapspeedmap(self.landcoverspeed_matrix, self.roadspeed_matrix)
         
         self.outputspeedmap(self.finalspeed_matrix, landcovermap, speedmap)

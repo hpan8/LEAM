@@ -5,7 +5,7 @@
 #python landcover2speedmap.py
 
 #test stocastic_randomwalk
-python stocasticgreedy_randomwalk.py 0
+time python stocasticgreedy_randomwalk.py 0
 #diff ./Data/costmaps/travelcostmap-cut_0_0_SE80.txt ./Data/costmaps/travelcostmap-cut_0_0_SE96.txt
 
 #test reducemaps

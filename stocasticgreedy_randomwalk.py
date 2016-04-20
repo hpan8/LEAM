@@ -22,7 +22,8 @@ This script will do:
 4) This scripts generate 800 maps for the selected cell with the last map as the final travel cost map: NW100
    Map generation for 5 steps takes about 31.85 seconds with 60 percent CPU usage.
    To obtain a travelcost map for one cell, it takes at least 800*31.85 = 25480 seconds ~= 424 min ~= 7hrs.
-   However, without log file and intermediate travelcost maps, the process will be much faster ==> set FASTNOLOG to 1.
+   However, without log file and intermediate travelcost maps, the process will be much faster ==> set FASTNOLOG to 1 
+   ==> 15min with 52371 cells (0.29%) covered.
 """
 
 FASTNOLOG = 1
@@ -100,6 +101,7 @@ class RandomWalk():
         self.celly=celly                           #initial starting cell y index
         self.distW = cellx                         #current cell x index
         self.distN = celly                         #current cell y index
+        self.maxmove = maxmove
         self.distancetuple = self.speedmatrix.shape
         self.indexlen = self.distancetuple[0]
         self.columnlen = self.distancetuple[1]
@@ -113,8 +115,7 @@ class RandomWalk():
         self.costmap.iloc[self.celly, self.cellx] = 0 # set the starting point cost to be 0
         self.costaccumulated = 0
         self.travelpathlist = []
-        self.movelist = []
-        self.repeatcost = 0
+        self.visited_dict = {}
 
         # select a seed for this cell to parallize the travelcost maps for each cell.
         # The seed of this cell is the product of the x and y axis positions of this cell.
@@ -146,11 +147,11 @@ class RandomWalk():
         """
         count = 0
         for i in range(repeattimes): # try the converge times=repeattimes
-            count += 1
+            print dirname, i, "#####################################################################################"
             self.dirlist = self.getdirlist(dirname, dirP, dirnearP, dirsideP, diropP)
             self.move2hrs()
             if FASTNOLOG == 0:
-                outcostfilename = self.outfilename(travelcostpath, travelcostmap, dirname, count)
+                outcostfilename = self.outfilename(travelcostpath, travelcostmap, dirname, i)
                 self.outputmap(self.costmap, outcostfilename)
 
     def outfilename(self, path, fname, dirname, count):
@@ -198,10 +199,19 @@ class RandomWalk():
         
         
     def move2hrs(self):
-        self.repeatcost = 0 
+        # reset values
         self.costaccumulated = 0
-        for i in range(100):  # it is necessary to set up the upper number of moves
-                               # otherwise, in a small map, it may never exceed maxcost and not stop
+        print "costaccumulated: " + str(self.costaccumulated)
+        self.travelpathlist = [] # reset self.travelpathlist each time
+        self.distN = self.celly  #reset to starting cell
+        self.distW = self.cellx  #reset to starting cell
+        print "celly, cellx: ", str(self.distN), str(self.distW)
+
+        # make continuous moves
+        for i in range(self.maxmove):  # it is necessary to set up the upper number of moves
+                                       # otherwise, in a small map, it may never exceed maxcost and not stop
+            print i, " times=========================================================================="
+            
             if self.costaccumulated < self.maxcost:
                 print "costaccumulated: " + str(self.costaccumulated)
                 self.makeonemove()
@@ -209,8 +219,8 @@ class RandomWalk():
                 print "exceed maxcost"
                 print "costaccumulated: " + str(self.costaccumulated)
                 break
-
         print self.travelpathlist
+        
                
     
     def makeonemove(self):
@@ -221,7 +231,6 @@ class RandomWalk():
         distE = self.columnlen-1-distW                   #distance to right boundary (steps of moves)
         pl = self.dirlist                                #direction possibility distribution
         
-        print "######################################################################################"
         print "current cell: ", "distN:", distN, " distW:", distW, " distS:", distS, " distE:", distE
         
         # if not meet the boundary, assign the speed in speed map,
@@ -268,12 +277,11 @@ class RandomWalk():
             p_list = [0.125, 0.125, 0.125, 0.125, 0.125, 0.125, 0.125, 0.125]
             print "divide by zero"
             
-        print p_list
+        print "plist: ", p_list
             
         # === decide which direction to move ===
         #choose 1 value out of 8 values with p_list with possibility distribution
         move = np.random.choice(8, 1, p=p_list)[0]
-        self.movelist.append(move)
 
         if move == 0:             #move to north
             self.distN -= 1
@@ -322,19 +330,14 @@ class RandomWalk():
         #Update the travel time/cost from initial cell to the current cell
         #which is the traveltime of traveling one cell plus the previous traveling time costC
         #Note: update only if the current cost is smaller than the previous one
-        costNew = min(self.costmap.iloc[self.distN, self.distW], traveltime+costC)
+        cell = (self.distN, self.distW)
+        costNew = min(self.costmap.iloc[cell], traveltime+costC)
+        print "costC: ", costC, " costNew: ", costNew
         self.costaccumulated = costNew
-        self.costmap.iloc[self.distN, self.distW] = costNew
+        self.costmap.iloc[cell] = costNew
 
-        self.travelpathlist.append((self.distN, self.distW))
-
-        # # count the number of continous walking in the region have walked before with the same cost
-        # if costNew == self.costmap.iloc[self.distN, self.distW]:
-        #     self.repeatcost += 1
-        # else:
-        #     self.repeatcost = 0
-        
-        #print "costaccumulated: ", self.costaccumulated
+        self.travelpathlist.append((self.distN, self.distW, costNew))
+        self.visited_dict[cell] = costNew
 
     def extractheader(self, speedmap):
         with open(speedmap, 'r') as r:
@@ -352,7 +355,8 @@ class RandomWalk():
             w.writelines(self.outfileheader)
         matrix.to_csv(path_or_buf=travelcostmap, sep=' ', index=False, header=False, mode = 'a') # append
             
-
+        for (x,y) , val in self.visited_dict.iteritems():
+            print "(" + str(x) + "," + str(y) + ")" + str(val)
 
 def main(argv):
     cellnum = int(sys.argv[1])
@@ -361,12 +365,11 @@ def main(argv):
         exit(0)
 
     (disW, disN, weight) = centermap2indexlist('./Data/pop_center.txt')[cellnum]
-    
+    disW = disN = 1000
     # redirect stdout to log file
-    if FASTNOLOG == 0:
-        logname = "./Data/costmaps/cell_" + str(disW) + "_" + str(disN) + "/log.txt"
-        createdirectorynotexist(logname)
-        sys.stdout = open(logname, 'w')
+    logname = "./Data/costmaps/cell_" + str(disW) + "_" + str(disN) + "/log.txt"
+    createdirectorynotexist(logname)
+    sys.stdout = open(logname, 'w')
 
     RandomWalk(disW,disN) #distW, distN
 

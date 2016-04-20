@@ -35,7 +35,7 @@ def import_rastermap(pathname, fname):
 
     if grass.find_file(fname)['name']:
          grass.run_command('g.remove', flags='f', rast=fname)
-    infilename = pathname + fname + '.gtif'
+    infilename = pathname + fname + '.tif'
     if grass.run_command('r.in.gdal', input=infilename, output=fname,
             overwrite=True, quiet=True):
         raise RuntimeError('unable to import rastermap ' + fname)
@@ -43,10 +43,9 @@ def import_rastermap(pathname, fname):
     if grass.run_command('r.info', map=fname):
         raise RuntimeError('unable to print region info ' + fname)
 
-def import_vectormap(pathname, layername):
+def import_vectormap(layername):
     """Import a vector layer into GRASS. The reion is set to the vector map with 30 meters resolution.
-       @param: pathname is the directory where vectormap is
-       @layername: the input vector files folder and also the imported layer name.
+       @param: layername is the input vector files folder and also the imported layer name.
     """
     # remove prior exisiting raster and vector layers
     if grass.run_command('g.remove', rast=layername, vect=layername):
@@ -93,19 +92,23 @@ def export_asciimap(layername):
 def main():
     grass_config('grass', 'model')
 
+    LANDUSEMAP = 'landuse'
     POPCENTERMAP = 'pop_center'
     EMPCENTERMAP = 'emp_centers5'
 
-    # transform population centers vector files to ascii map with 2010 population data.
-    import_vectormap('Data/pop_center', POPCENTERMAP)
-    vector2raster(POPCENTERMAP)
-    export_asciimap(POPCENTERMAP)
+    #transform raster landuse to ascii map
+    import_rastermap("./LU2Travel_Speed_Pan/", LANDUSEMAP)
+    export_asciimap(LANDUSEMAP)
 
-    # transform employment centers vector files to ascii map with 2010 population data.
-    import_vectormap('Data/emp_centers5', EMPCENTERMAP)
-    vector2raster(EMPCENTERMAP)
-    export_asciimap(EMPCENTERMAP)
+    # # transform population centers vector files to ascii map with 2010 population data.
+    # import_vectormap(POPCENTERMAP)
+    # vector2raster(POPCENTERMAP)
+    # export_asciimap(POPCENTERMAP)
 
+    # # transform employment centers vector files to ascii map with 2010 population data.
+    # import_vectormap(EMPCENTERMAP)
+    # vector2raster(EMPCENTERMAP)
+    # export_asciimap(EMPCENTERMAP)
 
 if __name__ == "__main__":
 	main()
