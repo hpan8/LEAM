@@ -22,8 +22,10 @@ This script will do:
 4) This scripts generate 800 maps for the selected cell with the last map as the final travel cost map: NW100
    Map generation for 5 steps takes about 31.85 seconds with 60 percent CPU usage.
    To obtain a travelcost map for one cell, it takes at least 800*31.85 = 25480 seconds ~= 424 min ~= 7hrs.
+   However, without log file and intermediate travelcost maps, the process will be much faster ==> set FASTNOLOG to 1.
 """
 
+FASTNOLOG = 1
 DEBUG = 3
 if DEBUG == 1:
     SPEEDMAP = "./Data/speedmaptest_1.txt"
@@ -37,6 +39,8 @@ else:
     SPEEDMAP = "./Data/speedmap.txt"
     TRAVELCOSTPATH = "./Data/costmaps"
     TRAVELCOSTMAP = "./Data/travelcostmap.txt"
+    
+
 
 
 CELLSIZE = 30 #meters
@@ -130,6 +134,9 @@ class RandomWalk():
         self.walkeachdirection("SW",travelcostpath, travelcostmap, repeattimes, dirP, dirnearP, dirsideP, diropP)
         self.walkeachdirection("W",travelcostpath, travelcostmap, repeattimes, dirP, dirnearP, dirsideP, diropP)
         self.walkeachdirection("NW",travelcostpath, travelcostmap, repeattimes, dirP, dirnearP, dirsideP, diropP)
+        if FASTNOLOG == 1:
+            outcostfilename = self.outfilename(travelcostpath, travelcostmap, "NW", 100)
+            self.outputmap(self.costmap, outcostfilename)
 
     def walkeachdirection(self, dirname, travelcostpath, travelcostmap, repeattimes, dirP, dirnearP, dirsideP, diropP):
         """Walk in one direction for <repeattimes> times. Each time generate an updated cost map
@@ -142,8 +149,9 @@ class RandomWalk():
             count += 1
             self.dirlist = self.getdirlist(dirname, dirP, dirnearP, dirsideP, diropP)
             self.move2hrs()
-            outcostfilename = self.outfilename(travelcostpath, travelcostmap, dirname, count)
-            self.outputmap(self.costmap, outcostfilename)
+            if FASTNOLOG == 0:
+                outcostfilename = self.outfilename(travelcostpath, travelcostmap, dirname, count)
+                self.outputmap(self.costmap, outcostfilename)
 
     def outfilename(self, path, fname, dirname, count):
         """Modify filename "file.txt" to be "cell0_0/file_0_0_SE1.txt" for starting cell (0,0) on the first 2hrs run.
@@ -355,9 +363,10 @@ def main(argv):
     (disW, disN, weight) = centermap2indexlist('./Data/pop_center.txt')[cellnum]
     
     # redirect stdout to log file
-    logname = "./Data/costmaps/cell_" + str(disW) + "_" + str(disN) + "/log.txt"
-    createdirectorynotexist(logname)
-    sys.stdout = open(logname, 'w')
+    if FASTNOLOG == 0:
+        logname = "./Data/costmaps/cell_" + str(disW) + "_" + str(disN) + "/log.txt"
+        createdirectorynotexist(logname)
+        sys.stdout = open(logname, 'w')
 
     RandomWalk(disW,disN) #distW, distN
 

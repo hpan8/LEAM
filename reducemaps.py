@@ -22,7 +22,8 @@ else:
 
 """
 This script will do:
-1) overlap thousands of maps
+1) convert costmap for each pop/emp center into attractive map
+2) overlap 100 attractive maps according to their weights
 """
 
 def outfilename(cellx, celly, path, fname, dirname, count):
