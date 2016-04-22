@@ -22,7 +22,7 @@ def grass_config(location, mapset, gisbase='/usr/local/grass-6.4.5svn', gisdbase
     from grass.script.setup import init
     gisrc = init(gisbase, gisdbase, location, mapset)    
 
-def import_rastermap(pathname, fname):
+def import_rastermap(fname):
     """Import a raster layer into GRASS
     Note that we need a PERMANENT folder in grass folder that has pre-setted projection
     information prepared before importing rastermap.
@@ -35,7 +35,7 @@ def import_rastermap(pathname, fname):
 
     if grass.find_file(fname)['name']:
          grass.run_command('g.remove', flags='f', rast=fname)
-    infilename = pathname + fname + '.tif'
+    infilename = './Input/' + fname + '.tif'
     if grass.run_command('r.in.gdal', input=infilename, output=fname,
             overwrite=True, quiet=True):
         raise RuntimeError('unable to import rastermap ' + fname)
@@ -55,8 +55,10 @@ def import_vectormap(layername):
     if grass.run_command('g.region', flags='d', res=30):
         raise RuntimeError('unable to set region ')
 
+    pathname = './Input/' + layername
+
     # import vector map
-    if grass.run_command('v.in.ogr', flags='o', dsn=layername,
+    if grass.run_command('v.in.ogr', flags='o', dsn=pathname,
             snap='0.01', output=layername, overwrite=True, quiet=True):
         raise RuntimeError('unable to import vectormap ' + layername)
 
@@ -64,7 +66,7 @@ def import_vectormap(layername):
     if grass.run_command('v.db.connect', map=layername, flags='c'):
         raise RuntimeError('unable to print info of vectormap ' + layername)
 
-def vector2raster(layername):
+def vector2rasterpop1000(layername):
     """Transform  the TOTAL_POP column value that is larger than 1000 in the vector layer to raster layer.
        @param: layername is the vector layer to be transformed to the raster form of this layer.
        Note that it is required to have "TOTAL_POP" column in the vector file.
@@ -78,12 +80,22 @@ def vector2raster(layername):
         use='attr', column='TOTAL_POP'):
         raise RuntimeError('unable to convert vector to raster: ' + layername)
 
-def export_asciimap(layername):
+def vector2rasterspeed(layername):
+    """Transform  the TOTAL_POP column value that is larger than 1000 in the vector layer to raster layer.
+       @param: layername is the vector layer to be transformed to the raster form of this layer.
+       Note that it is required to have "TOTAL_POP" column in the vector file.
+       //TODO: allow user to select which column name to select from vector map.
+    """
+    if grass.run_command('v.to.rast', input=layername, output=layername, overwrite=True,
+        use='attr', column='SPEED'):
+        raise RuntimeError('unable to convert vector to raster: ' + layername)
+
+def export_asciimapnull1(layername):
     """Export a raster layer into asciimap. The output folder is 'Data/'.
        @param: layername is the raster layer name.
     """
     outfilename = 'Data/'+layername+'.txt'
-    if grass.run_command('r.out.ascii', input=layername, output=outfilename):
+    if grass.run_command('r.out.ascii', input=layername, output=outfilename, null=1):
         raise RuntimeError('unable to export ascii map ' + layername)
     # outfilename = 'Data/'+layername+'.tiff'
     # if grass.run_command('r.out.tiff', input=layername, output=outfilename):
@@ -93,21 +105,27 @@ def main():
     grass_config('grass', 'model')
 
     LANDUSEMAP = 'landuse'
+    ROADMAP = 'chicago_road2'
     POPCENTERMAP = 'pop_center'
     EMPCENTERMAP = 'emp_centers5'
 
     #transform raster landuse to ascii map
-    import_rastermap("./LU2Travel_Speed_Pan/", LANDUSEMAP)
-    export_asciimap(LANDUSEMAP)
+    # import_rastermap(LANDUSEMAP)
+    # export_asciimap(LANDUSEMAP)
+
+    #transform vector road map to ascii map
+    import_vectormap(ROADMAP)
+    vector2rasterspeed(ROADMAP)
+    export_asciimapnull1(ROADMAP)
 
     # # transform population centers vector files to ascii map with 2010 population data.
     # import_vectormap(POPCENTERMAP)
-    # vector2raster(POPCENTERMAP)
+    # vector2rasterpop1000(POPCENTERMAP)
     # export_asciimap(POPCENTERMAP)
 
     # # transform employment centers vector files to ascii map with 2010 population data.
     # import_vectormap(EMPCENTERMAP)
-    # vector2raster(EMPCENTERMAP)
+    # vector2rasterpop1000(EMPCENTERMAP)
     # export_asciimap(EMPCENTERMAP)
 
 if __name__ == "__main__":

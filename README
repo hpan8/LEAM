@@ -14,15 +14,18 @@ the grass raster maps are saved in ./grass/model and ./Data
 the final speed map is saved in ./Data
 the travel cost maps are saved in ./Data/costmaps
 
-Input vector maps: emp_centers5, pop_center, LU2Travel_Speed_Pan/nlcd_1992+lu2travel_speed.txt
-python landcover2speedmap.py 
-		#generate ./Data/speedmap.txt
+Input vector maps: emp_centers5, pop_center, chicago_road2
+Input raster map:  landuse.gtif
+Input speed chart: LU2Travel_Speed_Pan/nlcd_1992+lu2travel_speed.txt
 python grasssetup.py     
-		#transform emp_centers5 and pop_center to ascii files
-		#./Data/emp_centers5.txt, ./Data/pop_center.txt
+		#transform emp_centers5, pop_center, landuse, and chicago_road2 to ascii files
+		#inside ./Data directory
+python landcover2speedmap.py 
+		#generate speedmap using landuse, chicago_road2 ascii files and speedchart
+		#to ./Data directory
 python stocasticgreedy_randomwalk.py <vallessthan100> 
 		#read center ascii to 100 centers by calling centermap2indexlist.py
-                #generate 800files for each center
+        #generate 800 files for each center
 		#call this file 100 times
 python reducemaps.py
 		#convert the 100 travelcost maps to attractive maps.

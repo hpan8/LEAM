@@ -7,7 +7,7 @@ from pandas import (Series,DataFrame, Panel,)
 from pprint import pprint
 
 #define debug version with different input maps for easy testing
-VERSION = "debug1"
+VERSION = "debug3"
 
 if VERSION == "debug1":  #short test version
     LANDCOVER='./LU2Travel_Speed_Pan/LU2006ASCII/landcover2006.txt'
@@ -18,11 +18,11 @@ elif VERSION == "debug2":#handmade test version
     ROAD='./LU2Travel_Speed_Pan/LU2006ASCII/roadtest.txt'
     SPEEDMAP="./Data/speedmaptest.txt"
 else:                    #final computation version 
-    LANDCOVER='./LU2Travel_Speed_Pan/LU2006ASCII/landcover2006.txt'    #ascii map
-    ROAD='./LU2Travel_Speed_Pan/LU2006ASCII/chrdras.txt'               #ascii map
+    LANDCOVER='./Data/landuse.txt'    #ascii map
+    ROAD='./Input/LU2Travel_Speed_Pan/LU2006ASCII/chrdras.txt'               #ascii map
     SPEEDMAP="./Data/speedmap.txt"
 
-SPEEDCHART="./LU2Travel_Speed_Pan/nlcd_1992+lu2travel_speed.txt"
+SPEEDCHART="./Input/LU2Travel_Speed_Pan/nlcd_2006+lu2travel_speed.txt"
 
 
 def asciiMap2DataFrame(file):
@@ -66,7 +66,7 @@ class SpeedMap:
                 self.speed_list.append(int(speed))
         # if catgory is not defined , the speed is 0.1 and will never be 0
         self.cat_list.append(None) 
-        self.speed_list.append(0.1)
+        self.speed_list.append(1)
     
     def cat2speedmap(self, matrix):
     	"""Replace the catgory values not in the matrix to be None, and then replace
