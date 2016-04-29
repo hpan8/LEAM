@@ -4,6 +4,9 @@ import numpy as np
 import math
 import pprint
 
+POPCENTERLIST = "./Data/popcenterlist.txt"
+EMPCENTERLIST = "./Data/empcenterlist.txt"
+
 #select a row: df.iloc[0]
 #select a column: df[0]
 def centermap2indexlist(fname):
@@ -30,8 +33,14 @@ def centermap2indexlist(fname):
     return center_sorted100list
 
 def main():
-    centermap2indexlist('./Data/pop_center.txt')
-    centermap2indexlist('./Data/emp_centers5.txt')
+    popcenter_list = centermap2indexlist('./Data/pop_center.txt')
+    empcenter_list = centermap2indexlist('./Data/emp_centers5.txt')
+    with open(POPCENTERLIST, 'w') as p:
+        for x, y, val in popcenter_list:
+            p.write("%i,%i,%i\n" % (x,y,val))
+    with open(EMPCENTERLIST, 'w') as e:
+        for x, y, val in empcenter_list:
+            e.write("%i,%i,%i\n" % (x,y,val))
 
 if __name__ == "__main__":
     main()

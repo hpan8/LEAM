@@ -20,12 +20,15 @@ Input speed chart: LU2Travel_Speed_Pan/nlcd_1992+lu2travel_speed.txt
 python grasssetup.py     
 		#transform emp_centers5, pop_center, landuse, and chicago_road2 to ascii files
 		#inside ./Data directory
+python centermap2indexlist.py
+                #read center ascii to 100 centers and print list of (x, y, val) to 
+                #popcenterlist.txt and empcenterlist.txt in ./Data directory
 python landcover2speedmap.py 
 		#generate speedmap using landuse, chicago_road2 ascii files and speedchart
 		#to ./Data directory
 python stocasticgreedy_randomwalk.py <vallessthan100> 
-		#read center ascii to 100 centers by calling centermap2indexlist.py
-        #generate 800 files for each center
+		#read either pop centers or emp centers from ./Data/popcenterlist.txt or ./Data/empcenterlist.txt
+                #generate 800 files for each center
 		#call this file 100 times
 python reducemaps.py
 		#convert the 100 travelcost maps to attractive maps.

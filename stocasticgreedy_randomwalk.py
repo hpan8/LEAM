@@ -40,13 +40,13 @@ else:
     SPEEDMAP = "./Data/speedmap.txt"
     TRAVELCOSTPATH = "./Data/costmaps"
     TRAVELCOSTMAP = "./Data/travelcostmap.txt"
-    
-
+POPCENTERLIST = "./Data/popcenterlist.txt"
+EMPCENTERLIST = "./Data/empcenterlist.txt"    
 
 
 CELLSIZE = 30 #meters
-MAXCOST = 120 #minutes
-MAXMOVE = 1000 #cell
+MAXCOST = 90 #minutes
+MAXMOVE = 1000 #cell                    #if highest speed is 933 meters/min = 34.78 miles.hr = 56 km/hr, 1000*30*sqrt(2)/933 = 45.47min. If 90min, need 2000 steps
 REPEATTIMES = 100
 DIRP = 0.3                              #possibility to go to pre-selected direction, e.g. N
 DIRNEARP = 0.2                          #possibiltiy to go to the two directions near the selected e.g.NW and NE
@@ -99,18 +99,19 @@ class RandomWalk():
         self.speedmatrix=pd.read_csv(speedmap, skiprows=6, header=None, sep=r"\s+")
         self.cellx=cellx                           #initial starting cell x index
         self.celly=celly                           #initial starting cell y index
-        self.distW = cellx                         #current cell x index
-        self.distN = celly                         #current cell y index
+        self.distN = cellx                         #current cell x index
+        self.distW = celly                         #current cell y index #(cellx, celly) = (0, 1) = (disN, disW)
         self.maxmove = maxmove
         self.distancetuple = self.speedmatrix.shape
-        self.indexlen = self.distancetuple[0]
-        self.columnlen = self.distancetuple[1]
+        self.xmax = self.distancetuple[0]
+        self.ymax = self.distancetuple[1]
+        print self.xmax, self.ymax
         self.maxcost=maxcost
         self.cellsize=cellsize
         self.outfileheader = self.extractheader(speedmap)
         
         #initiliaze parameters
-        self.costmap = pd.DataFrame(index=range(self.indexlen), columns=range(self.columnlen)) #initialize costmap with nan
+        self.costmap = pd.DataFrame(index=range(self.xmax), columns=range(self.ymax)) #initialize costmap with nan
         self.costmap = self.costmap.fillna(999)                                                               #initialize costmap with 999
         self.costmap.iloc[self.celly, self.cellx] = 0 # set the starting point cost to be 0
         self.costaccumulated = 0
@@ -203,8 +204,8 @@ class RandomWalk():
         self.costaccumulated = 0
         print "costaccumulated: " + str(self.costaccumulated)
         self.travelpathlist = [] # reset self.travelpathlist each time
-        self.distN = self.celly  #reset to starting cell
-        self.distW = self.cellx  #reset to starting cell
+        self.distN = self.cellx  #reset to starting cell
+        self.distW = self.celly  #reset to starting cell
         print "celly, cellx: ", str(self.distN), str(self.distW)
 
         # make continuous moves
@@ -222,14 +223,13 @@ class RandomWalk():
         print self.travelpathlist
         
                
-    
     def makeonemove(self):
         # === fetch current cell data ===
-        distN = self.distN                               #distance to top boundary   (steps of moves)
-        distS = self.indexlen-1-distN                    #distance to bottom boundary  (steps of moves)
-        distW = self.distW                               #distance to left boundary   (steps of moves) 
-        distE = self.columnlen-1-distW                   #distance to right boundary (steps of moves)
-        pl = self.dirlist                                #direction possibility distribution
+        distN = self.distN                           #distance to top boundary   (steps of moves)
+        distS = self.xmax-1-distN                    #distance to bottom boundary  (steps of moves)
+        distW = self.distW                           #distance to left boundary   (steps of moves) 
+        distE = self.ymax-1-distW                    #distance to right boundary (steps of moves)
+        pl = self.dirlist                            #direction possibility distribution
         
         print "current cell: ", "distN:", distN, " distW:", distW, " distS:", distS, " distE:", distE
         
@@ -360,21 +360,25 @@ class RandomWalk():
 
 def main(argv):
     cellnum = int(sys.argv[1])
-    if cellnum > 100:
+    if cellnum >= 100:
         print "Error: the cellnum choice should be less than 100"
         exit(0)
 
-    (disW, disN, weight) = centermap2indexlist('./Data/pop_center.txt')[cellnum]
+    # read only one popcenter specified by cellnum from popcenterlist
+    with open(POPCENTERLIST, 'r') as p:
+        popcenterlist = p.readlines()
+    (disW, disN, weight) = popcenterlist[cellnum].strip('\n').split(',')
+    print disW, disN, weight
     disW = disN = 1000
-    # redirect stdout to log file
-    logname = "./Data/costmaps/cell_" + str(disW) + "_" + str(disN) + "/log.txt"
-    createdirectorynotexist(logname)
-    sys.stdout = open(logname, 'w')
+    # # redirect stdout to log file
+    # logname = "./Data/costmaps/cell_" + str(disW) + "_" + str(disN) + "/log.txt"
+    # createdirectorynotexist(logname)
+    # sys.stdout = open(logname, 'w')
 
     RandomWalk(disW,disN) #distW, distN
 
 if __name__ == "__main__":
     if len(sys.argv) < 2:
-        print "Error: Need an argument less than 101 as cellnum choice."
+        print "Error: Need an argument less than 99 as cellnum choice."
         exit(0)
     main(sys.argv[1:])
