@@ -369,13 +369,13 @@ def main(argv):
         popcenterlist = p.readlines()
     (disW, disN, weight) = popcenterlist[cellnum].strip('\n').split(',')
     print disW, disN, weight
-    disW = disN = 1000
-    # # redirect stdout to log file
-    # logname = "./Data/costmaps/cell_" + str(disW) + "_" + str(disN) + "/log.txt"
-    # createdirectorynotexist(logname)
-    # sys.stdout = open(logname, 'w')
 
-    RandomWalk(disW,disN) #distW, distN
+    # redirect stdout to log file
+    logname = "./Data/costmaps/cell_" + disW + "_" + disN + "/log.txt"
+    createdirectorynotexist(logname)
+    sys.stdout = open(logname, 'w')
+
+    RandomWalk(int(disW),int(disN)) #distW, distN
 
 if __name__ == "__main__":
     if len(sys.argv) < 2:
