@@ -113,7 +113,7 @@ class RandomWalk():
         #initiliaze parameters
         self.costmap = pd.DataFrame(index=range(self.xmax), columns=range(self.ymax)) #initialize costmap with nan
         self.costmap = self.costmap.fillna(999)                                                               #initialize costmap with 999
-        self.costmap.iloc[self.celly, self.cellx] = 0 # set the starting point cost to be 0
+        self.costmap.iloc[self.cellx, self.celly] = 0 # set the starting point cost to be 0
         self.costaccumulated = 0
         self.travelpathlist = []
         self.visited_dict = {}
