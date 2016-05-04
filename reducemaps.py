@@ -20,23 +20,25 @@ ATTRACTIVEMAP = "./Data/attrmap.txt"
 This script will do:
 1) convert costmap for each pop/emp center into attractive map
 2) overlap 100 attractive maps according to their weights
+
 """
 
 def outfilename(cellx, celly, path, fname, dirname, count):
     """Modify filename "file.txt" to be "cell0_0/Data/file_0_0_SE1.txt" for starting cell (0,0) on the first 2hrs run.
     """
-    return path + "/cell" + "_" + str(cellx) + "_" + str(celly) + "/Data/" + fname[:-4]\
+    return path + "/cell" + "_" + str(cellx) + "_" + str(celly) + "/" + fname[:-4]\
                          + "_" + str(cellx) +"_" + str(celly) + "_" +dirname + str(count) + ".txt"
                         
 def costmap2attrmap(costmap):
     try:
         costmatrix = pd.read_csv(costmap, skiprows=6, header=None, sep=r"\s+" ) #skip the 6 header lines
+        costmatrix.replace(to_replace=0.0, value=0.001)
     except IOError as e:
         raise e
         return costmatrix
 
     attmatrix = 1/costmatrix
-    pprint(attmatrix)
+    #pprint(attmatrix)
     return attmatrix
 
 def extractheader(speedmap):
@@ -53,8 +55,9 @@ def main():
     columnlen = attinxcol[1]
     attrmap = pd.DataFrame(index=range(indexlen), columns=range(columnlen)) #initialize costmap with nan
     attrmap = attrmap.fillna(0)    #initialize costmap with 0
-    for i in range(100):
-        (disW, disN, weight) = centermap2indexlist(CENTERMAP)[i]
+    centerlist = centermap2indexlist(CENTERMAP)
+    for i in range(99):
+        (disW, disN, weight) = centerlist[i]
         costmapfile = outfilename(disW, disN, TRAVELCOSTPATH, TRAVELCOSTMAP, "NW", 100)
         try:
            newattrmap = costmap2attrmap(costmapfile)
@@ -62,6 +65,8 @@ def main():
             print "file not found: ", outfilename
             continue
         attrmap = attrmap + weight*newattrmap
+        print "done 1 map"
+
 
     
     with open(ATTRACTIVEMAP, 'w') as w:

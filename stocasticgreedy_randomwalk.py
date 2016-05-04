@@ -31,7 +31,7 @@ DEBUG = 3
 if DEBUG == 1:
     SPEEDMAP = "./Data/speedmaptest_1.txt"
     TRAVELCOSTPATH = "./Data/costmaps"
-    TRAVELCOSTMAP = "./Data/travelcostmaptest_#.txt"
+    TRAVELCOSTMAP = "travelcostmaptest_#.txt"
 elif DEBUG == 2:
     SPEEDMAP = "./Data/speedmap-cut.txt"
     TRAVELCOSTPATH = "./Data/costmaps"
@@ -39,7 +39,7 @@ elif DEBUG == 2:
 else:
     SPEEDMAP = "./Data/speedmap.txt"
     TRAVELCOSTPATH = "./Data/costmaps"
-    TRAVELCOSTMAP = "./Data/travelcostmap.txt"
+    TRAVELCOSTMAP = "travelcostmap.txt"
 POPCENTERLIST = "./Data/popcenterlist.txt"
 EMPCENTERLIST = "./Data/empcenterlist.txt"    
 
@@ -105,7 +105,6 @@ class RandomWalk():
         self.distancetuple = self.speedmatrix.shape
         self.xmax = self.distancetuple[0]
         self.ymax = self.distancetuple[1]
-        print self.xmax, self.ymax
         self.maxcost=maxcost
         self.cellsize=cellsize
         self.outfileheader = self.extractheader(speedmap)
@@ -122,7 +121,6 @@ class RandomWalk():
         # The seed of this cell is the product of the x and y axis positions of this cell.
         seedbase = self.cellx * self.celly
         np.random.seed(seedbase)
-
         self.walk8directions(travelcostpath, travelcostmap, repeattimes, dirP, dirnearP, dirsideP, diropP)
 
     def walk8directions(self, travelcostpath, travelcostmap, repeattimes, dirP, dirnearP, dirsideP, diropP):
@@ -340,10 +338,9 @@ class RandomWalk():
         self.visited_dict[cell] = costNew
 
     def extractheader(self, speedmap):
-        with open(speedmap, 'r') as r:
-            lines = r.readlines()
-            lines = [l for l in lines[:6]] # 6 is the number of header rows
-            return lines
+        with open(HEADER, 'r') as h:
+            header = h.read()
+        return header
         
     def outputmap(self, matrix, travelcostmap):
         """Copy the header meta information from speedmap, and output travelcost/travelpath matrix to map
@@ -352,7 +349,7 @@ class RandomWalk():
         # if travelcostmap's path directory does not exist, creat the directory.
         createdirectorynotexist(travelcostmap)
         with open(travelcostmap, 'w') as w:
-            w.writelines(self.outfileheader)
+            w.write(self.outfileheader)
         matrix.to_csv(path_or_buf=travelcostmap, sep=' ', index=False, header=False, mode = 'a') # append
             
         for (x,y) , val in self.visited_dict.iteritems():
