@@ -31,7 +31,7 @@ python stocasticgreedy_randomwalk.py <vallessthan100>
                 #generate 800 files for each center
 		#call this file 100 times
 python reducemaps.py
-		#convert the 100 travelcost maps to attractive maps.
+		#convert the 100 travelcost maps to attractive maps. Replace all 0.0 with 0.001.
 		#overlap the 100 maps using the weight of each attractive map
-		#not finished...
+		#check infinite values: not done...
 
