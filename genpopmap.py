@@ -17,7 +17,7 @@ with open(POPCENTERLIST, 'r') as p:
 outmap = "./Data/" + cellx + "_" + celly + ".txt"
 with open(HEADER, 'r') as h:
 	header = h.read()
-with open(outmap, 'w') as f:
+with open(outmap, 'w') as f: 
 	f.write(header)
 popcentermap = pd.DataFrame(index=range(5571), columns=range(3244))
 popcentermap = popcentermap.fillna(0) 

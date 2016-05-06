@@ -24,6 +24,8 @@ This script will do:
    To obtain a travelcost map for one cell, it takes at least 800*31.85 = 25480 seconds ~= 424 min ~= 7hrs.
    However, without log file and intermediate travelcost maps, the process will be much faster ==> set FASTNOLOG to 1 
    ==> 15min with 52371 cells (0.29%) covered.
+5) set a base cost 20min for cells that are less 20min
+   assign a speed possibility that is sqrt of speed-speedmap
 """
 
 FASTNOLOG = 1
@@ -41,7 +43,8 @@ else:
     TRAVELCOSTPATH = "./Data/costmaps"
     TRAVELCOSTMAP = "travelcostmap.txt"
 POPCENTERLIST = "./Data/popcenterlist.txt"
-EMPCENTERLIST = "./Data/empcenterlist.txt"    
+EMPCENTERLIST = "./Data/empcenterlist.txt"  
+HEADER = "Input/arcGISheader.txt"  
 
 
 CELLSIZE = 30 #meters
@@ -52,6 +55,7 @@ DIRP = 0.3                              #possibility to go to pre-selected direc
 DIRNEARP = 0.2                          #possibiltiy to go to the two directions near the selected e.g.NW and NE
 DIRSIDEP = 0.12                         #possibiltiy to go to the two directions at 90 degree difference e.g.W and E
 DIROPP = 1-(DIRP+2*DIRNEARP+2*DIRSIDEP) #possibility to go to the other directions. e.g. S, SW, and SE #this should not be set to 0
+
 
 
 def createdirectorynotexist(fname):
@@ -107,7 +111,7 @@ class RandomWalk():
         self.ymax = self.distancetuple[1]
         self.maxcost=maxcost
         self.cellsize=cellsize
-        self.outfileheader = self.extractheader(speedmap)
+        self.outfileheader = self.extractheader(HEADER)
         
         #initiliaze parameters
         self.costmap = pd.DataFrame(index=range(self.xmax), columns=range(self.ymax)) #initialize costmap with nan
@@ -134,6 +138,8 @@ class RandomWalk():
         self.walkeachdirection("SW",travelcostpath, travelcostmap, repeattimes, dirP, dirnearP, dirsideP, diropP)
         self.walkeachdirection("W",travelcostpath, travelcostmap, repeattimes, dirP, dirnearP, dirsideP, diropP)
         self.walkeachdirection("NW",travelcostpath, travelcostmap, repeattimes, dirP, dirnearP, dirsideP, diropP)
+        #all costs < 20 equals to 20
+        self.costmap[self.costmap < 20] = 20
         if FASTNOLOG == 1:
             outcostfilename = self.outfilename(travelcostpath, travelcostmap, "NW", 100)
             self.outputmap(self.costmap, outcostfilename)
@@ -337,8 +343,8 @@ class RandomWalk():
         self.travelpathlist.append((self.distN, self.distW, costNew))
         self.visited_dict[cell] = costNew
 
-    def extractheader(self, speedmap):
-        with open(HEADER, 'r') as h:
+    def extractheader(self, headermap):
+        with open(headermap, 'r') as h:
             header = h.read()
         return header
         

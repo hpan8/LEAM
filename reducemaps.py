@@ -66,8 +66,8 @@ def main():
             continue
         attrmap = attrmap + weight*newattrmap
         print "done 1 map"
-
-
+    attrmap.replace([np.inf, -np.inf], np.nan)
+ 
     
     with open(ATTRACTIVEMAP, 'w') as w:
         w.writelines(header)

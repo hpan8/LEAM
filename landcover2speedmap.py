@@ -88,12 +88,15 @@ class SpeedMap:
     def outputspeedmap(self, matrix, landcovermap, speedmap):
         """Copy the header meta information from Landcover map, and output speed matrix to speedmap
            @param: matrix is the matrix to be saved in speedmap txt file.
+           Note that the output map is the square root value of all speeds, not a speedmap but a speed
+           weight in choosing the direction to go in stocastic random walk.
         """
         with open(landcovermap, 'r') as r:
             lines = r.readlines()
             lines = [l for l in lines[:6]] # 6 is the number of header rows
             with open(speedmap, 'w') as w:
                 w.writelines(lines)
+        matrix = matrix.apply(np.sqrt)
         matrix.to_csv(path_or_buf=speedmap, sep=' ', index=False, header=False, mode = 'a') # append
 
 
