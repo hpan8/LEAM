@@ -22,7 +22,7 @@ else:                    #final computation version
     ROAD='./Input/LU2Travel_Speed_Pan/LU2006ASCII/chrdras.txt'               #ascii map
     SPEEDMAP="./Data/speedmap.txt"
 
-SPEEDCHART="./Input/LU2Travel_Speed_Pan/nlcd_2006+lu2travel_speed.txt"
+SPEEDCHART="./Input/LU2Travel_Speed_Pan/speedlist.txt"
 
 
 def asciiMap2DataFrame(file):
@@ -88,8 +88,8 @@ class SpeedMap:
     def outputspeedmap(self, matrix, landcovermap, speedmap):
         """Copy the header meta information from Landcover map, and output speed matrix to speedmap
            @param: matrix is the matrix to be saved in speedmap txt file.
-           Note that the output map is the square root value of all speeds, not a speedmap but a speed
-           weight in choosing the direction to go in stocastic random walk.
+           Note that this output speedmap is the square root of all the speeds ==> It is the weigth of speed
+           in calculating the directions.
         """
         with open(landcovermap, 'r') as r:
             lines = r.readlines()

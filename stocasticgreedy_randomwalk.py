@@ -5,6 +5,7 @@ import math
 import logging
 import numpy as np
 import pandas as pd
+import time
 from numpy import maximum
 from pandas import (Series,DataFrame, Panel,)
 from pprint import pprint
@@ -24,8 +25,6 @@ This script will do:
    To obtain a travelcost map for one cell, it takes at least 800*31.85 = 25480 seconds ~= 424 min ~= 7hrs.
    However, without log file and intermediate travelcost maps, the process will be much faster ==> set FASTNOLOG to 1 
    ==> 15min with 52371 cells (0.29%) covered.
-5) set a base cost 20min for cells that are less 20min
-   assign a speed possibility that is sqrt of speed-speedmap
 """
 
 FASTNOLOG = 1
@@ -33,7 +32,7 @@ DEBUG = 3
 if DEBUG == 1:
     SPEEDMAP = "./Data/speedmaptest_1.txt"
     TRAVELCOSTPATH = "./Data/costmaps"
-    TRAVELCOSTMAP = "travelcostmaptest_#.txt"
+    TRAVELCOSTMAP = "./Data/travelcostmaptest_#.txt"
 elif DEBUG == 2:
     SPEEDMAP = "./Data/speedmap-cut.txt"
     TRAVELCOSTPATH = "./Data/costmaps"
@@ -43,19 +42,17 @@ else:
     TRAVELCOSTPATH = "./Data/costmaps"
     TRAVELCOSTMAP = "travelcostmap.txt"
 POPCENTERLIST = "./Data/popcenterlist.txt"
-EMPCENTERLIST = "./Data/empcenterlist.txt"  
-HEADER = "Input/arcGISheader.txt"  
-
+EMPCENTERLIST = "./Data/empcenterlist.txt"    
+HEADER = "./Input/arcGISheader.txt" 
 
 CELLSIZE = 30 #meters
-MAXCOST = 90 #minutes
-MAXMOVE = 1000 #cell                    #if highest speed is 933 meters/min = 34.78 miles.hr = 56 km/hr, 1000*30*sqrt(2)/933 = 45.47min. If 90min, need 2000 steps
+MAXCOST = 120 #minutes
+MAXMOVE = 2000 #cell                    #if highest speed is 933 meters/min = 34.78 miles.hr = 56 km/hr, 1000*30*sqrt(2)/933 = 45.47min. If 90min, need 2000 steps
 REPEATTIMES = 100
 DIRP = 0.3                              #possibility to go to pre-selected direction, e.g. N
 DIRNEARP = 0.2                          #possibiltiy to go to the two directions near the selected e.g.NW and NE
 DIRSIDEP = 0.12                         #possibiltiy to go to the two directions at 90 degree difference e.g.W and E
 DIROPP = 1-(DIRP+2*DIRNEARP+2*DIRSIDEP) #possibility to go to the other directions. e.g. S, SW, and SE #this should not be set to 0
-
 
 
 def createdirectorynotexist(fname):
@@ -109,6 +106,7 @@ class RandomWalk():
         self.distancetuple = self.speedmatrix.shape
         self.xmax = self.distancetuple[0]
         self.ymax = self.distancetuple[1]
+        print self.xmax, self.ymax
         self.maxcost=maxcost
         self.cellsize=cellsize
         self.outfileheader = self.extractheader(HEADER)
@@ -125,6 +123,7 @@ class RandomWalk():
         # The seed of this cell is the product of the x and y axis positions of this cell.
         seedbase = self.cellx * self.celly
         np.random.seed(seedbase)
+
         self.walk8directions(travelcostpath, travelcostmap, repeattimes, dirP, dirnearP, dirsideP, diropP)
 
     def walk8directions(self, travelcostpath, travelcostmap, repeattimes, dirP, dirnearP, dirsideP, diropP):
@@ -138,7 +137,6 @@ class RandomWalk():
         self.walkeachdirection("SW",travelcostpath, travelcostmap, repeattimes, dirP, dirnearP, dirsideP, diropP)
         self.walkeachdirection("W",travelcostpath, travelcostmap, repeattimes, dirP, dirnearP, dirsideP, diropP)
         self.walkeachdirection("NW",travelcostpath, travelcostmap, repeattimes, dirP, dirnearP, dirsideP, diropP)
-        #all costs < 20 equals to 20
         self.costmap[self.costmap < 20] = 20
         if FASTNOLOG == 1:
             outcostfilename = self.outfilename(travelcostpath, travelcostmap, "NW", 100)
@@ -347,7 +345,7 @@ class RandomWalk():
         with open(headermap, 'r') as h:
             header = h.read()
         return header
-        
+
     def outputmap(self, matrix, travelcostmap):
         """Copy the header meta information from speedmap, and output travelcost/travelpath matrix to map
            @param: matrix is the matrix to be saved in outputfile, a .txt file.
@@ -355,13 +353,14 @@ class RandomWalk():
         # if travelcostmap's path directory does not exist, creat the directory.
         createdirectorynotexist(travelcostmap)
         with open(travelcostmap, 'w') as w:
-            w.write(self.outfileheader)
+            w.writelines(self.outfileheader)
         matrix.to_csv(path_or_buf=travelcostmap, sep=' ', index=False, header=False, mode = 'a') # append
             
         for (x,y) , val in self.visited_dict.iteritems():
             print "(" + str(x) + "," + str(y) + ")" + str(val)
 
 def main(argv):
+    start = time.time()
     cellnum = int(sys.argv[1])
     if cellnum >= 100:
         print "Error: the cellnum choice should be less than 100"
@@ -379,6 +378,9 @@ def main(argv):
     sys.stdout = open(logname, 'w')
 
     RandomWalk(int(disW),int(disN)) #distW, distN
+    end = time.time()
+    print (end-start)
+
 
 if __name__ == "__main__":
     if len(sys.argv) < 2:

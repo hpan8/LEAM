@@ -1,11 +1,12 @@
 #!/usr/bin/env python
-from StringIO import StringIO
+#from StringIO import StringIO
 import numpy as np
 import pandas as pd
 import math
 import os
+import time
 from numpy import maximum
-from pandas import (Series,DataFrame, Panel,)
+from pandas import DataFrame
 from pprint import pprint
 from centermap2indexlist import centermap2indexlist
 
@@ -20,13 +21,12 @@ ATTRACTIVEMAP = "./Data/attrmap.txt"
 This script will do:
 1) convert costmap for each pop/emp center into attractive map
 2) overlap 100 attractive maps according to their weights
-
 """
 
 def outfilename(cellx, celly, path, fname, dirname, count):
     """Modify filename "file.txt" to be "cell0_0/Data/file_0_0_SE1.txt" for starting cell (0,0) on the first 2hrs run.
     """
-    return path + "/cell" + "_" + str(cellx) + "_" + str(celly) + "/" + fname[:-4]\
+    return path + "/cell" + "_" + str(cellx) + "_" + str(celly) + "/" + fname[:-4] \
                          + "_" + str(cellx) +"_" + str(celly) + "_" +dirname + str(count) + ".txt"
                         
 def costmap2attrmap(costmap):
@@ -64,14 +64,17 @@ def main():
         except IOError:
             print "file not found: ", outfilename
             continue
+        print "\nstart adding...\n"
+        start = time.time()
         attrmap = attrmap + weight*newattrmap
-        print "done 1 map"
-    attrmap.replace([np.inf, -np.inf], np.nan)
- 
-    
+        end = time.time()
+        print "done map using time: "
+        print (end-start)
+   
+    attrmap.replace([np.inf, -np.inf], np.nan) 
     with open(ATTRACTIVEMAP, 'w') as w:
         w.writelines(header)
-    matrix.to_csv(path_or_buf=ATTRACTIVEMAP, sep=' ', index=False, header=False, mode = 'a') # append
+    attrmap.to_csv(path_or_buf=ATTRACTIVEMAP, sep=' ', index=False, header=False, mode = 'a') # append
 
 if __name__ == "__main__":
     main()
