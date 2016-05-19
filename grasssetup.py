@@ -66,28 +66,26 @@ def import_vectormap(layername):
     if grass.run_command('v.db.connect', map=layername, flags='c'):
         raise RuntimeError('unable to print info of vectormap ' + layername)
 
-def vector2rasterpop1000(layername):
+def vector2rasterpop1000(layername, column_to_select='TOTAL_POP'):
     """Transform  the TOTAL_POP column value that is larger than 1000 in the vector layer to raster layer.
        @param: layername is the vector layer to be transformed to the raster form of this layer.
        Note that it is required to have "TOTAL_POP" column in the vector file.
-       //TODO: allow user to select which column name to select from vector map.
     """
     layer1000 = layername + "1000"
     if grass.run_command('v.extract', input=layername, output=layer1000, overwrite=True,
         where='TOTAL_POP>=1000'):
         raise RuntimeError('unable to convert vector to raster: ' + layername)
     if grass.run_command('v.to.rast', input=layer1000, output=layername, overwrite=True,
-        use='attr', column='TOTAL_POP'):
+        use='attr', column=column_to_select):
         raise RuntimeError('unable to convert vector to raster: ' + layername)
 
-def vector2rasterspeed(layername):
+def vector2raster(layername, column_to_select='CLASS'):
     """Transform  the TOTAL_POP column value that is larger than 1000 in the vector layer to raster layer.
        @param: layername is the vector layer to be transformed to the raster form of this layer.
-       Note that it is required to have "TOTAL_POP" column in the vector file.
-       //TODO: allow user to select which column name to select from vector map.
+               column_to_select is to select one layer of value to the raster file. The default is to select class type.
     """
     if grass.run_command('v.to.rast', input=layername, output=layername, overwrite=True,
-        use='attr', column='SPEED'):
+        use='attr', column=column_to_select):
         raise RuntimeError('unable to convert vector to raster: ' + layername)
 
 def export_asciimapnull1(layername):
@@ -110,12 +108,12 @@ def main():
     EMPCENTERMAP = 'emp_centers5'
 
     #transform raster landuse to ascii map
-    # import_rastermap(LANDUSEMAP)
+    #import_rastermap(LANDUSEMAP)
     # export_asciimap(LANDUSEMAP)
 
     #transform vector road map to ascii map
     import_vectormap(ROADMAP)
-    vector2rasterspeed(ROADMAP)
+    vector2raster(ROADMAP)
     export_asciimapnull1(ROADMAP)
 
     # # transform population centers vector files to ascii map with 2010 population data.

@@ -24,10 +24,10 @@ python centermap2indexlist.py
                 #read center ascii to 100 centers and print list of (x, y, val) to 
                 #popcenterlist.txt and empcenterlist.txt in ./Data directory
 python landcover2speedmap.py 
-		#generate speedmap using landuse, chicago_road2 ascii files and speedchart
+		#generate speedmap using landuse, chicago_road2 ascii files and ./Input/speedlist.txt
 		#to ./Data directory
-                #Note that this map contains no actual speed, but square root of speed to be speed weight in deciding
-                #random walk direction
+		#generate dirprobmap using landuse, chicago_road2 ascii files and ./Input/possibilitylist.txt 
+		#to ./Data directory (probability to go which direction) 
 python stocasticgreedy_randomwalk.py <vallessthan100> 
 		#read either pop centers or emp centers from ./Data/popcenterlist.txt or ./Data/empcenterlist.txt
                 #generate 800 files for each center

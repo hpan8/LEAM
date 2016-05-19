@@ -24,30 +24,21 @@ This script will do:
    Map generation for 5 steps takes about 31.85 seconds with 60 percent CPU usage.
    To obtain a travelcost map for one cell, it takes at least 800*31.85 = 25480 seconds ~= 424 min ~= 7hrs.
    However, without log file and intermediate travelcost maps, the process will be much faster ==> set FASTNOLOG to 1 
-   ==> 15min with 52371 cells (0.29%) covered.
+   ==> about 1hr per map 
 """
 
 FASTNOLOG = 1
-DEBUG = 3
-if DEBUG == 1:
-    SPEEDMAP = "./Data/speedmaptest_1.txt"
-    TRAVELCOSTPATH = "./Data/costmaps"
-    TRAVELCOSTMAP = "./Data/travelcostmaptest_#.txt"
-elif DEBUG == 2:
-    SPEEDMAP = "./Data/speedmap-cut.txt"
-    TRAVELCOSTPATH = "./Data/costmaps"
-    TRAVELCOSTMAP = "travelcostmap-cut.txt"
-else:
-    SPEEDMAP = "./Data/speedmap.txt"
-    TRAVELCOSTPATH = "./Data/costmaps"
-    TRAVELCOSTMAP = "travelcostmap.txt"
+SPEEDMAP = "./Data/speedmap.txt"
+DIRPROBMAP = "./Data/dirprobmap.txt"
+TRAVELCOSTPATH = "./Data/costmaps"
+TRAVELCOSTMAP = "travelcostmap.txt"
 POPCENTERLIST = "./Data/popcenterlist.txt"
 EMPCENTERLIST = "./Data/empcenterlist.txt"    
 HEADER = "./Input/arcGISheader.txt" 
 
 CELLSIZE = 30 #meters
-MAXCOST = 120 #minutes
-MAXMOVE = 2000 #cell                    #if highest speed is 933 meters/min = 34.78 miles.hr = 56 km/hr, 1000*30*sqrt(2)/933 = 45.47min. If 90min, need 2000 steps
+MAXCOST = 90 #minutes
+MAXMOVE = 1000 #cell                    #if highest speed is 933 meters/min = 34.78 miles.hr = 56 km/hr, 1000*30*sqrt(2)/933 = 45.47min. If 90min, need 2000 steps
 REPEATTIMES = 100
 DIRP = 0.3                              #possibility to go to pre-selected direction, e.g. N
 DIRNEARP = 0.2                          #possibiltiy to go to the two directions near the selected e.g.NW and NE
@@ -79,7 +70,8 @@ def min(x, y):
     
 
 class RandomWalk():
-    def __init__(self, cellx, celly, speedmap=SPEEDMAP, travelcostpath=TRAVELCOSTPATH, travelcostmap=TRAVELCOSTMAP, 
+    def __init__(self, cellx, celly, speedmap=SPEEDMAP, dirprobmap=DIRPROBMAP, 
+        travelcostpath=TRAVELCOSTPATH, travelcostmap=TRAVELCOSTMAP, 
         maxcost=MAXCOST, maxmove=MAXMOVE, repeattimes=REPEATTIMES, cellsize=CELLSIZE, 
         dirP=DIRP, dirnearP = DIRNEARP, dirsideP=DIRSIDEP, diropP=DIROPP):
         """ Random Walk from one cell on a given map
@@ -98,6 +90,7 @@ class RandomWalk():
         # W: west, N: north, E: east, S:South
         #read in values
         self.speedmatrix=pd.read_csv(speedmap, skiprows=6, header=None, sep=r"\s+")
+        self.dirprobmatrix=pd.read_csv(dirprobmap, skiprows=6, header=None, sep=r"\s+")
         self.cellx=cellx                           #initial starting cell x index
         self.celly=celly                           #initial starting cell y index
         self.distN = cellx                         #current cell x index
@@ -106,7 +99,6 @@ class RandomWalk():
         self.distancetuple = self.speedmatrix.shape
         self.xmax = self.distancetuple[0]
         self.ymax = self.distancetuple[1]
-        print self.xmax, self.ymax
         self.maxcost=maxcost
         self.cellsize=cellsize
         self.outfileheader = self.extractheader(HEADER)
@@ -175,7 +167,6 @@ class RandomWalk():
         p1 = dirnearP
         p2 = dirsideP
         p3 = diropP
-        print p0, p1, p2, p3
         
         if dirname == "N":
             #                    [ 0   1   2   3   4   5    6   7 ]
@@ -204,11 +195,11 @@ class RandomWalk():
     def move2hrs(self):
         # reset values
         self.costaccumulated = 0
-        print "costaccumulated: " + str(self.costaccumulated)
+        print "costaccumulated: ", self.costaccumulated
         self.travelpathlist = [] # reset self.travelpathlist each time
         self.distN = self.cellx  #reset to starting cell
         self.distW = self.celly  #reset to starting cell
-        print "celly, cellx: ", str(self.distN), str(self.distW)
+        print "celly, cellx: ", self.distN, self.distW
 
         # make continuous moves
         for i in range(self.maxmove):  # it is necessary to set up the upper number of moves
@@ -216,11 +207,11 @@ class RandomWalk():
             print i, " times=========================================================================="
             
             if self.costaccumulated < self.maxcost:
-                print "costaccumulated: " + str(self.costaccumulated)
+                print "costaccumulated: ", round(self.costaccumulated,2)
                 self.makeonemove()
             else:
                 print "exceed maxcost"
-                print "costaccumulated: " + str(self.costaccumulated)
+                print "costaccumulated: ", round(self.costaccumulated,2)
                 break
         print self.travelpathlist
         
@@ -242,24 +233,25 @@ class RandomWalk():
         speedC = self.speedmatrix.iloc[distN, distW]
         costC = self.costmap.iloc[distN, distW]
         if distN != 0:
-            speedN = self.speedmatrix.iloc[distN-1, distW]
+            speedN = self.dirprobmatrix.iloc[distN-1, distW]
         if distS != 0: 
-            speedS = self.speedmatrix.iloc[distN+1, distW]
+            speedS = self.dirprobmatrix.iloc[distN+1, distW]
         if distW != 0: 
-            speedW = self.speedmatrix.iloc[distN, distW-1]
+            speedW = self.dirprobmatrix.iloc[distN, distW-1]
         if distE != 0: 
-            speedE = self.speedmatrix.iloc[distN, distW+1]
+            speedE = self.dirprobmatrix.iloc[distN, distW+1]
             
         if distN != 0 and distW != 0: 
-            speedNW = self.speedmatrix.iloc[distN-1, distW-1]
+            speedNW = self.dirprobmatrix.iloc[distN-1, distW-1]
         if distN != 0 and distE != 0:
-            speedNE = self.speedmatrix.iloc[distN-1, distW+1]
+            speedNE = self.dirprobmatrix.iloc[distN-1, distW+1]
         if distS != 0 and distW != 0:
-            speedSW = self.speedmatrix.iloc[distN+1, distW-1]
+            speedSW = self.dirprobmatrix.iloc[distN+1, distW-1]
         if distS != 0 and distE != 0:  
-            speedSE = self.speedmatrix.iloc[distN+1, distW+1]
+            speedSE = self.dirprobmatrix.iloc[distN+1, distW+1]
              
-        print "speedlist: ", speedN, speedS, speedW, speedE, speedNW, speedNE, speedSW, speedSE, speedC
+        print "dirproblist: ", round(speedN,2), round(speedS,2), round(speedW,2), round(speedE,2), \
+                             round(speedNW,2), round(speedNE,2), round(speedSW,2), round(speedSE,2), round(speedC,2)
         
         # === caculate probability list ===
         #direction weight list, the direction has more probabiltiy are assigned a larger weight
@@ -279,7 +271,7 @@ class RandomWalk():
             p_list = [0.125, 0.125, 0.125, 0.125, 0.125, 0.125, 0.125, 0.125]
             print "divide by zero"
             
-        print "plist: ", p_list
+        print "plist: ", np.round(p_list,3)
             
         # === decide which direction to move ===
         #choose 1 value out of 8 values with p_list with possibility distribution
@@ -287,32 +279,26 @@ class RandomWalk():
 
         if move == 0:             #move to north
             self.distN -= 1
-            speedCnew = speedN
         elif move == 1:           #move to south
             self.distN += 1
-            speedCnew = speedS
         elif move == 2:           #move to west
             self.distW -= 1
-            speedCnew = speedW
         elif move == 3:           #move to east
             self.distW += 1
-            speedCnew = speedE
         elif move == 4:           #move to northwest
             self.distN -= 1
             self.distW -= 1
-            speedCnew = speedNW
         elif move == 5:           #move to northeast
             self.distN -= 1
             self.distW += 1
-            speedCnew = speedNE
         elif move == 6:           #move to southwest
             self.distN += 1
             self.distW -= 1
-            speedCnew = speedSW
         else:                     #move to southeast
             self.distN += 1
             self.distW += 1
-            speedCnew = speedSE
+        
+        speedCnew = self.speedmatrix.iloc[self.distN, self.distW]
             
         if move < 4:
             traveldisthalf = 30/2.0
@@ -326,7 +312,7 @@ class RandomWalk():
             print "divide by zero"
             
         print "move: ", move, ",distN: ", self.distN, ",distW: ", self.distW, \
-              ",oldspeed: ", speedC, ", newspeed: ", speedCnew, ", traveltime: ", traveltime
+              ",oldspeed: ", round(speedC,2), ", newspeed: ", round(speedCnew,2), ", traveltime: ", traveltime
         
         # === update the cost map ===
         #Update the travel time/cost from initial cell to the current cell
@@ -357,7 +343,7 @@ class RandomWalk():
         matrix.to_csv(path_or_buf=travelcostmap, sep=' ', index=False, header=False, mode = 'a') # append
             
         for (x,y) , val in self.visited_dict.iteritems():
-            print "(" + str(x) + "," + str(y) + ")" + str(val)
+            print "(" ,x, ",",y,")",val
 
 def main(argv):
     start = time.time()

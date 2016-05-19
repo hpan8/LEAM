@@ -5,32 +5,23 @@ import pandas as pd
 from numpy import maximum
 from pandas import (Series,DataFrame, Panel,)
 from pprint import pprint
+        
+LANDCOVER='./Data/landuse.txt'    #ascii map
+ROAD='./Input/LU2Travel_Speed_Pan/LU2006ASCII/chrdras.txt'               #ascii map
+SPEEDMAP="./Data/speedmap.txt"
+DIRPROBMAP="./Data/dirprobmap.txt"
 
-#define debug version with different input maps for easy testing
-VERSION = "debug3"
-
-if VERSION == "debug1":  #short test version
-    LANDCOVER='./LU2Travel_Speed_Pan/LU2006ASCII/landcover2006.txt'
-    ROAD='./LU2Travel_Speed_Pan/LU2006ASCII/chrdras.txt'
-    SPEEDMAP="./Data/speedmap-cut-test.txt"
-elif VERSION == "debug2":#handmade test version
-    LANDCOVER='./LU2Travel_Speed_Pan/LU2006ASCII/landtest.txt'
-    ROAD='./LU2Travel_Speed_Pan/LU2006ASCII/roadtest.txt'
-    SPEEDMAP="./Data/speedmaptest.txt"
-else:                    #final computation version 
-    LANDCOVER='./Data/landuse.txt'    #ascii map
-    ROAD='./Input/LU2Travel_Speed_Pan/LU2006ASCII/chrdras.txt'               #ascii map
-    SPEEDMAP="./Data/speedmap.txt"
-
-SPEEDCHART="./Input/LU2Travel_Speed_Pan/speedlist.txt"
+DIRPROBCHART = "./Input/possibilitylist.txt"
+SPEEDCHART="./Input/speedlist.txt"
 
 
 def asciiMap2DataFrame(file):
     df = pd.read_csv(file, skiprows=6, header=None, sep=r"\s+")
-    if VERSION == "debug1":
-        return df.ix[0:100, 50:88]
-    else:
-        return df
+    return df
+    #if VERSION == "debug1":
+    #    return df.ix[0:100, 50:88]
+    #else:
+    #    return df
     
 class SpeedMap:
     def __init__(self, landcover_matrix, road_matrix, speedchart, landcovermap=LANDCOVER,\
@@ -43,7 +34,7 @@ class SpeedMap:
         # replace the landcover catogory values with speed values
         self.landcover_matrix = landcover_matrix
         self.landcoverspeed_matrix = self.cat2speedmap(landcover_matrix)
-        self.roadspeed_matrix = road_matrix #self.cat2speedmap(road_matrix)
+        self.roadspeed_matrix = self.cat2speedmap(road_matrix)
         self.finalspeed_matrix = self.overlapspeedmap(self.landcoverspeed_matrix, self.roadspeed_matrix)
         
         self.outputspeedmap(self.finalspeed_matrix, landcovermap, speedmap)
@@ -88,15 +79,13 @@ class SpeedMap:
     def outputspeedmap(self, matrix, landcovermap, speedmap):
         """Copy the header meta information from Landcover map, and output speed matrix to speedmap
            @param: matrix is the matrix to be saved in speedmap txt file.
-           Note that this output speedmap is the square root of all the speeds ==> It is the weigth of speed
-           in calculating the directions.
         """
         with open(landcovermap, 'r') as r:
             lines = r.readlines()
             lines = [l for l in lines[:6]] # 6 is the number of header rows
             with open(speedmap, 'w') as w:
                 w.writelines(lines)
-        matrix = matrix.apply(np.sqrt)
+        #matrix = matrix.apply(np.sqrt)
         matrix.to_csv(path_or_buf=speedmap, sep=' ', index=False, header=False, mode = 'a') # append
 
 
@@ -109,6 +98,7 @@ def main():
     landcover_matrix = asciiMap2DataFrame(LANDCOVER)
     road_matrix = asciiMap2DataFrame(ROAD)
     speedmap = SpeedMap(landcover_matrix, road_matrix, SPEEDCHART)
+    dirprobmap = SpeedMap(landcover_matrix, road_matrix, DIRPROBCHART, LANDCOVER, DIRPROBMAP)
 
 
 if __name__ == "__main__":
