@@ -79,7 +79,7 @@ def vector2rasterpop1000(layername, column_to_select='TOTAL_POP'):
         use='attr', column=column_to_select):
         raise RuntimeError('unable to convert vector to raster: ' + layername)
 
-def vector2raster(layername, column_to_select='CLASS'):
+def vector2rasterspeed(layername, column_to_select='SPEED'):
     """Transform  the TOTAL_POP column value that is larger than 1000 in the vector layer to raster layer.
        @param: layername is the vector layer to be transformed to the raster form of this layer.
                column_to_select is to select one layer of value to the raster file. The default is to select class type.
@@ -113,7 +113,7 @@ def main():
 
     #transform vector road map to ascii map
     import_vectormap(ROADMAP)
-    vector2raster(ROADMAP)
+    vector2rasterspeed(ROADMAP)
     export_asciimapnull1(ROADMAP)
 
     # # transform population centers vector files to ascii map with 2010 population data.
