@@ -27,12 +27,18 @@ This script will do:
 """
 
 FASTNOLOG = 1
+ISEMP = 1
+
+if (ISEMP == 1):
+    TRAVELCOSTPATH = "./Data/costmaps"
+    CENTERLIST="./Data/empcenterlist.txt"
+else:
+    TRAVELCOSTPATH = "./Data/costmaps"
+    CENTERLIST="./Data/popcenterlist.txt"
+
 SPEEDMAP = "./Data/speedmap.txt"
 DIRPROBMAP = "./Data/dirprobmap.txt"
-TRAVELCOSTPATH = "./Data/costmaps"
 TRAVELCOSTMAP = "travelcostmap.txt"
-POPCENTERLIST = "./Data/popcenterlist.txt"
-EMPCENTERLIST = "./Data/empcenterlist.txt"    
 HEADER = "./Input/arcGISheader.txt" 
 
 CELLSIZE = 30 #meters

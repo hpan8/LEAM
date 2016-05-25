@@ -14,11 +14,11 @@ import thread
 ISEMP = 0
 
 if ISEMP == 1:
-    CENTERMAP = "./Data/emp_centerlist.txt"
+    CENTERLIST = "./Data/empcenterlist.txt"
     TRAVELCOSTPATH = "./Data/costmaps-emp"
     ATTRACTIVEMAP = "./Data/attrmap-emp.txt"
 else:
-    CENTERMAP = "./Data/pop_centerlist.txt"
+    CENTERLIST = "./Data/popcenterlist.txt"
     TRAVELCOSTPATH = "./Data/costmaps"
     ATTRACTIVEMAP = "./Data/attrmap-pop.txt"
 
@@ -65,7 +65,7 @@ def main():
     attrmap = pd.DataFrame(index=range(indexlen), columns=range(columnlen)) #initialize costmap with nan
     attrmap = attrmap.fillna(0)    #initialize costmap with 0
 
-    with open(POPCENTERLIST, 'r') as p:
+    with open(CENTERLIST, 'r') as p:
         centerlist = p.readlines()
 
     for i in range(99):
@@ -84,7 +84,7 @@ def main():
         print (end-start)
    
     #attrmap.replace([np.inf, -np.inf], np.nan) 
-    normalizer = np.matrix(attrmap).max()
+    #normalizer = np.matrix(attrmap).max()
     #attrmap /= normalizer
     with open(ATTRACTIVEMAP, 'w') as w:
         w.writelines(header)

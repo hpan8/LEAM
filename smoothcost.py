@@ -2,15 +2,16 @@ import pandas as pd
 import numpy as np
 from scipy.interpolate import griddata
 
+
 """
 Time consumption: 5min
 """
 
-COST = -30
+COST = -50
 NANMAX = 3820
-INPUT="./Data/attrmap-noinf.txt"
+INPUT="./Data/attrmap-pop.txt"
 HEADER="./Input/arcGISheader.txt"
-OUTPUT="./Data/attrmap_interpolated.txt"
+OUTPUT="./Data/attrmap-pop-interpolated.txt"
 
 def smoothcost(costmap):
    npmap = np.array(costmap)
@@ -58,6 +59,9 @@ def interpolate2max(attrmap):
    attrmap = np.maximum(attrmap1, attrmap2)
    # interpolate again
    attrmap.apply(left_interpolate, axis=1)
+   attrmap.apply(right_interpolate, axis=1)
+   attrmap.apply(left_interpolate, axis=0)
+   attrmap.apply(right_interpolate, axis=1)
    return attrmap
 
 def outputmap(attrmap, header):
