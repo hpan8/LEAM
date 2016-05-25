@@ -8,13 +8,23 @@ import time
 from numpy import maximum
 from pandas import DataFrame
 from pprint import pprint
-from centermap2indexlist import centermap2indexlist
+import multiprocessing
+import thread
 
-CENTERMAP = "./Data/pop_center.txt"
+ISEMP = 0
+
+if ISEMP == 1:
+    CENTERMAP = "./Data/emp_centerlist.txt"
+    TRAVELCOSTPATH = "./Data/costmaps-emp"
+    ATTRACTIVEMAP = "./Data/attrmap-emp.txt"
+else:
+    CENTERMAP = "./Data/pop_centerlist.txt"
+    TRAVELCOSTPATH = "./Data/costmaps"
+    ATTRACTIVEMAP = "./Data/attrmap-pop.txt"
+
 SPEEDMAP = "./Data/speedmap.txt"
-TRAVELCOSTPATH = "./Data/costmaps"
 TRAVELCOSTMAP = "travelcostmap.txt"
-ATTRACTIVEMAP = "./Data/attrmap.txt"
+HEADER = "./Input/arcGISheader.txt"
 
 
 """
@@ -41,23 +51,25 @@ def costmap2attrmap(costmap):
     #pprint(attmatrix)
     return attmatrix
 
-def extractheader(speedmap):
-    with open(speedmap, 'r') as r:
-        lines = r.readlines()
-        lines = [l for l in lines[:6]] # 6 is the number of header rows
-        return lines
+def extractheader(header):
+    with open(header, 'r') as h:
+        header = h.read()
+    return header
     
 def main():
     speedmap = pd.read_csv(SPEEDMAP, skiprows=6, header=None, sep=r"\s+")
-    header = extractheader(SPEEDMAP)
+    header = extractheader(HEADER)
     attinxcol = speedmap.shape
     indexlen = attinxcol[0]
     columnlen = attinxcol[1]
     attrmap = pd.DataFrame(index=range(indexlen), columns=range(columnlen)) #initialize costmap with nan
     attrmap = attrmap.fillna(0)    #initialize costmap with 0
-    centerlist = centermap2indexlist(CENTERMAP)
+
+    with open(POPCENTERLIST, 'r') as p:
+        centerlist = p.readlines()
+
     for i in range(99):
-        (disW, disN, weight) = centerlist[i]
+        (disW, disN, weight) = centerlist[i].strip('\n').split(',')
         costmapfile = outfilename(disW, disN, TRAVELCOSTPATH, TRAVELCOSTMAP, "NW", 100)
         try:
            newattrmap = costmap2attrmap(costmapfile)
@@ -71,7 +83,9 @@ def main():
         print "done map using time: "
         print (end-start)
    
-    attrmap.replace([np.inf, -np.inf], np.nan) 
+    #attrmap.replace([np.inf, -np.inf], np.nan) 
+    normalizer = np.matrix(attrmap).max()
+    #attrmap /= normalizer
     with open(ATTRACTIVEMAP, 'w') as w:
         w.writelines(header)
     attrmap.to_csv(path_or_buf=ATTRACTIVEMAP, sep=' ', index=False, header=False, mode = 'a') # append

@@ -7,9 +7,8 @@ import numpy as np
 import pandas as pd
 import time
 from numpy import maximum
-from pandas import (Series,DataFrame, Panel,)
+from pandas import DataFrame
 from pprint import pprint
-from centermap2indexlist import centermap2indexlist
 
 """
 This script will do:
