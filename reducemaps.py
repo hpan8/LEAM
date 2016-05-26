@@ -78,7 +78,7 @@ def main():
             continue
         print "\nstart adding...\n"
         start = time.time()
-        attrmap = attrmap + weight*newattrmap
+        attrmap = attrmap + (int)weight*newattrmap
         end = time.time()
         print "done map using time: "
         print (end-start)
