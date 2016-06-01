@@ -86,7 +86,7 @@ def outputmap(attrmap, header, output):
       np.savetxt(f, attrmap, fmt='%d',delimiter=' ')
 
 def main():
-   attrmap_df = pd.read_csv(INPUT, sep=' ', skiprows=0, header=None, dtype=np.int)
+   attrmap_df = pd.read_csv(INPUT, sep=' ', skiprows=6, header=None, dtype=np.float)
    attrmap = np.asarray(attrmap_df)
    weightarray = np.fromfile(WEIGHTMAP, sep=' ', dtype=np.int)
    

@@ -11,6 +11,13 @@ from pprint import pprint
 import multiprocessing
 import thread
 
+"""
+This script will do:
+1) convert costmap for each pop/emp center into attractive map
+2) overlap 100 attractive maps according to their weights
+3) round all float values to integers
+"""
+
 ISEMP = 0
 
 if ISEMP == 1:
@@ -26,12 +33,6 @@ SPEEDMAP = "./Data/speedmap.txt"
 TRAVELCOSTMAP = "travelcostmap.txt"
 HEADER = "./Input/arcGISheader.txt"
 
-
-"""
-This script will do:
-1) convert costmap for each pop/emp center into attractive map
-2) overlap 100 attractive maps according to their weights
-"""
 
 def outfilename(cellx, celly, path, fname, dirname, count):
     """Modify filename "file.txt" to be "cell0_0/Data/file_0_0_SE1.txt" for starting cell (0,0) on the first 2hrs run.
@@ -88,6 +89,7 @@ def main():
     #attrmap /= normalizer
     with open(ATTRACTIVEMAP, 'w') as w:
         w.writelines(header)
+    attrmap.round() # round to integer
     attrmap.to_csv(path_or_buf=ATTRACTIVEMAP, sep=' ', index=False, header=False, mode = 'a') # append
 
 if __name__ == "__main__":
