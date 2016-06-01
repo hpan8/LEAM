@@ -4,6 +4,10 @@ import time
 from scipy.interpolate import griddata
 from multiprocessing.dummy import Pool
 
+"""
+Time consumption for 64 threads and 1 repeattime: 12min
+"""
+
 #INPUT="testmap1"
 #OUTPUT="testmapout"
 INPUT="./Data/attrmap-pop.txt"
@@ -87,7 +91,7 @@ def outputmap(attrmap, header, output):
 
 def main():
    attrmap_df = pd.read_csv(INPUT, sep=' ', skiprows=6, header=None, dtype=np.float)
-   attrmap = np.asarray(attrmap_df)
+   attrmap = np.asarray(attrmap_df).round
    weightarray = np.fromfile(WEIGHTMAP, sep=' ', dtype=np.int)
    
    smoothcost = SmoothCost(attrmap, weightarray)

@@ -16,6 +16,8 @@ This script will do:
 1) convert costmap for each pop/emp center into attractive map
 2) overlap 100 attractive maps according to their weights
 3) round all float values to integers
+
+Time consumption: 4min
 """
 
 ISEMP = 0
@@ -79,7 +81,7 @@ def main():
             continue
         print "\nstart adding...\n"
         start = time.time()
-        attrmap = attrmap + (int)weight*newattrmap
+        attrmap = attrmap + (int)(weight)*newattrmap
         end = time.time()
         print "done map using time: "
         print (end-start)
