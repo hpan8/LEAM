@@ -4,20 +4,15 @@ import time
 from scipy.interpolate import griddata
 from multiprocessing.dummy import Pool
 
-
-"""
-Time consumption: 5min
-"""
-
-# COST = -1
-# NANMAX = 1
-# INPUT="testmap1"
-# OUTPUT="testmapout"
-COST = -100
-NANMAX = 3820
+#INPUT="testmap1"
+#OUTPUT="testmapout"
 INPUT="./Data/attrmap-pop.txt"
-HEADER="./Input/arcGISheader.txt"
 OUTPUT="./Data/attrmap-pop-interpolated.txt"
+HEADER="./Input/arcGISheader.txt"
+WEIGHTMAP = "./Input/weightmap.txt"
+THREADNUM = 64
+REPEATNUM = 1
+
 
 def extractheader(headermap):
    with open(headermap, 'r') as h:
@@ -26,72 +21,77 @@ def extractheader(headermap):
 #global value header
 header = extractheader(HEADER)
 
-class InterpolationMatrix():
-   def __init__(self, matrix, nanmax=NANMAX):
+class SmoothCost():
+   def __init__(self, matrix, weightarray, repeattimes=REPEATNUM):
       start = time.time()
-      self.interpolatedmatrix = self.interpolate2max(matrix)
-      print "interpolation: ", (time.time()-start)
+      self.weightarray = weightarray
+      self.matrix = matrix
+      (self.rows, self.cols) = matrix.shape
+      self.maxrow = self.rows-2
+      self.maxcol = self.cols-2
+      self.smoothedmap = np.zeros((self.rows, self.cols), dtype=np.int)
+      self.smooth2max(repeattimes)
 
-   def left_interpolate(self,row):
-      """[reference]http://stackoverflow.com/questions/22491628/extrapolate-values-in-pandas-dataframe
+   def smoothrow(self, rowidx):
+      """This function assigns the center of 5*5 cells a value that equals to the sum of all cells having larger values multiplying by
+         a weight. The weight is read from the input weightmap and has a value propotional to the distance to the center cell. Repeat 
+         the steps for all cells of the row with rowidx in the attrmap matrix.
+         @param: rowidx is the row index of the attrmap matrix.
+         @output: the smoothedmap filled with row index of rowidx.
       """
-      size = len(row)
-      print "row: ", row, 
-      for i in xrange(size):
-         if row[i] <= NANMAX and i > 0 and row[i-1] > NANMAX:
-            row[i] = row[i-1] + COST
-      print row
-      return row
+      if rowidx < 2 or rowidx >= self.maxrow:
+         return
+      #debug: print "rowidx: ", rowidx , "==========="
+      for colidx in xrange(2, self.maxcol): # for each cell in a row
+         midval = self.matrix[rowidx][colidx]
+         #debug: print "colidx: ", colidx, "-----------"
+         #debug: print "midval: ", midval
+         nearsum = 0
+         weightsum = 0
+         index = 0
+         for i in xrange(rowidx-2, rowidx+3):    # for each row of the 25 cells
+           	for j in xrange(colidx-2, colidx+3): # for each cell of the 25 cells
+           	   curval = self.matrix[i][j]
+           	   if midval < curval:
+           	   	curweight = self.weightarray[index]
+           	    	nearsum += curval*curweight
+           	    	weightsum += curweight
+           	   index += 1
+         #debug: print nearsum, " ", weightsum
+         if weightsum == 0:
+         	self.smoothedmap[rowidx][colidx] = 0
+         else:
+         	self.smoothedmap[rowidx][colidx] = nearsum/weightsum
 
-   def right_interpolate(self,row):
-      size = len(row)
-      maxi = size-1
-      for i in reversed(xrange(size)):
-         if row[i] <= NANMAX  and i < maxi and row[i+1] > NANMAX:
-            row[i] = row[i+1] + COST
-      return row
 
-   def interpolate2max(self, matrix):
-      """The interpolation is first done by going from left to right, right to left,
-         going down and going up seperately. Then we overlap these four maps to obtain
-         the maximum attractiveness for each cell. One last interpolation from left to right
-         is done to make sure all cells have been interpolated.
+   def smooth2max(self, repeattimes):
+      """smooth2max creates THREADNUM number of thread to parallell smoothing each row of the attrmap matrix.
+         As the two side columns and rows are not smoothed in the attrmap, overlay the original map and smoothedmap
+         can obtain the original attrativenesss score for the side columns and rows. Also, cells that decreases its
+         values due to rounding to int can have the original higher values back.
       """
-      left = np.copy(matrix)
-      right = np.copy(left)
-      up = np.transpose(np.copy(left))
-      down = np.copy(up)
-
-      #inteporlate copies
-      pool = Pool(16)
-      left = pool.map(self.left_interpolate, left)  
-      right = pool.map(self.right_interpolate, right) 
-      down = pool.map(self.left_interpolate, down)
-      up = pool.map(self.right_interpolate, up)
-
-      # overlap copies
-      attrmap1 = np.maximum(left,right)
-      attrmap2 = np.transpose(np.maximum(up, down))
+      for i in xrange(repeattimes):
+         pool = Pool(THREADNUM)
+         pool.map(self.smoothrow, xrange(self.rows))
       
-      attrmap = np.maximum(attrmap1, attrmap2)
-      # interpolate again
-      attrmap = pool.map(self.left_interpolate, attrmap)
-      return attrmap
+         #debug:
+         #for rowidx in xrange(self.rows):
+         #   self.smoothrow(rowidx)
+         self.matrix = np.maximum(self.smoothedmap, self.matrix)
+      self.smoothedmap = self.matrix
 
 def outputmap(attrmap, header, output):
    with open(output, 'w') as f:
       f.writelines(header)
       np.savetxt(f, attrmap, fmt='%d',delimiter=' ')
 
-
-
 def main():
-   attrmap = np.loadtxt(INPUT, delimiter=' ', skiprows=0, dtype='int')
+   attrmap_df = pd.read_csv(INPUT, sep=' ', skiprows=0, header=None, dtype=np.int)
+   attrmap = np.asarray(attrmap_df)
+   weightarray = np.fromfile(WEIGHTMAP, sep=' ', dtype=np.int)
    
-   interpolation = InterpolationMatrix(attrmap)
-   attrmap = interpolation.interpolatedmatrix
-   
-   attrmap = np.round(attrmap,0)# the output is rounded to 2 digits
+   smoothcost = SmoothCost(attrmap, weightarray)
+   attrmap = smoothcost.smoothedmap
    outputmap(attrmap, header, OUTPUT)
 
 if __name__ == "__main__":
