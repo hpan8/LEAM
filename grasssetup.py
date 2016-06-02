@@ -3,6 +3,7 @@ import os
 import sys
 sys.path += ['./bin']
 from glob import iglob
+import time
 # import subprocess
 # from subprocess import check_call
 
@@ -99,6 +100,33 @@ def export_asciimapnull1(layername):
     # if grass.run_command('r.out.tiff', input=layername, output=outfilename):
     #     raise RuntimeError('unable to export tiff map ' + layername)    
 
+def ascii2raster(layername):
+    filename = 'Data/' + layername + '.txt'
+    if grass.run_command('r.in.ascii', input=filename, output=layername):
+        raise RuntimeError('unable to read ascii map to raster map ' + layername )
+
+def gencontour(layername, contourname):
+    """This process takes about 22sec for one map 
+    """
+    if grass.run_command('r.contour', input=layername, output=contourname, levels=[3817,5000,6000,7000,9000, 11000, 12000, 13000, 15000, 18000, 23008]):
+        raise RuntimeError('unable to generate contour map for ' + layername )
+
+    # print vector map data column names
+    if grass.run_command('v.db.connect', map=contourname, flags='c'):
+        raise RuntimeError('unable to print info of vectormap ' + contourname)
+
+def vector2rastercat(layername):
+    if grass.run_command('v.to.rast', input=layername, output=layername, overwrite=True,
+        use='cat'):
+        raise RuntimeError('unable to convert vector cat to raster: ' + layername)
+
+def exportraster(layername):
+    outfilename = 'Data/'+layername+'.tif'
+    if grass.run_command('r.out.gdal', input=layername, output=outfilename, type='UInt16'):
+        raise RuntimeError('unable to export raster map ' + layername )
+
+
+
 def main():
     grass_config('grass', 'model')
 
@@ -106,15 +134,17 @@ def main():
     ROADMAP = 'chicago_road2'
     POPCENTERMAP = 'pop_center'
     EMPCENTERMAP = 'emp_centers5'
+    VISIALMAP = 'attrmap_pop'
+    CONTOURMAP = 'attrmap_pop_contour'
 
-    #transform raster landuse to ascii map
-    #import_rastermap(LANDUSEMAP)
+    # # transform raster landuse to ascii map
+    # import_rastermap(LANDUSEMAP)
     # export_asciimap(LANDUSEMAP)
 
-    #transform vector road map to ascii map
-    import_vectormap(ROADMAP)
-    vector2rasterspeed(ROADMAP)
-    export_asciimapnull1(ROADMAP)
+    # # transform vector road map to ascii map
+    # import_vectormap(ROADMAP)
+    # vector2rasterspeed(ROADMAP)
+    # export_asciimapnull1(ROADMAP)
 
     # # transform population centers vector files to ascii map with 2010 population data.
     # import_vectormap(POPCENTERMAP)
@@ -125,6 +155,16 @@ def main():
     # import_vectormap(EMPCENTERMAP)
     # vector2rasterpop1000(EMPCENTERMAP)
     # export_asciimap(EMPCENTERMAP)
+
+    # visualize an ascii map to rastermap
+    #ascii2raster(VISIALMAP)
+    start = time.time()
+    #gencontour(VISIALMAP, CONTOURMAP)
+    vector2rastercat(CONTOURMAP)
+    print "time to convert raster: ", (time.time()-start)
+    exportraster(CONTOURMAP)
+    print "time to export raster: ", (time.time()-start)
+
 
 if __name__ == "__main__":
 	main()
