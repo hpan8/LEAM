@@ -11,32 +11,37 @@ the grass raster maps are saved in ./grass/model and ./Data
 the final speed map is saved in ./Data
 the travel cost maps are saved in ./Data/costmaps
 
-Input vector maps: emp_centers5, pop_center, chicago_road2
-Input raster map:  landuse.gtif
-Input speed chart: LU2Travel_Speed_Pan/nlcd_1992+lu2travel_speed.txt
+Input vector maps: ./Input/emp_centers5, ./Input/pop_center, ./Input/chicago_road2
+Input raster map:  ./Input/landuse.gtif
+Input speed chart: ./Input/speedlist.txt
 
-Run program:
+Special thanks to roger of NCSA UIUC.
+
+############## Run program: #####################
 
 python grasssetup.py     
-		#transform emp_centers5, pop_center, landuse, and chicago_road2 to ascii files
-		#inside ./Data directory
+        #transform emp_centers5, pop_center, landuse, and chicago_road2 to ascii files
+        #inside ./Data directory
+        #modify main() to select which functions to use.
 python centermap2indexlist.py
         #read center ascii to 100 centers and print list of (x, y, val) to 
         #popcenterlist.txt and empcenterlist.txt in ./Data directory
 python landcover2speedmap.py 
-		#generate speedmap using landuse, chicago_road2 ascii files 
-		#and ./Input/speedlist.txt to ./Data directory
-		#generate dirprobmap using landuse, chicago_road2 ascii files  
-		#and ./Input/possibilitylist.txt to ./Data directory (probability to go which direction) 
+        #generate speedmap using landuse, chicago_road2 ascii files 
+        #and ./Input/speedlist.txt to ./Data directory
+        #generate dirprobmap using landuse, chicago_road2 ascii files  
+        #and ./Input/possibilitylist.txt to ./Data directory (probability to go which direction) 
 python stocasticgreedy_randomwalk.py <vallessthan100> 
-		#read either pop centers or emp centers from 
-		#./Data/popcenterlist.txt or ./Data/empcenterlist.txt
+        #read either pop centers or emp centers from 
+        #./Data/popcenterlist.txt or ./Data/empcenterlist.txt
         #generate 800 files for each center
-		#call this file 100 times
-		#set the smallest cost to be 20min
+        #call this file 100 times
+        #set the smallest cost to be 20min
+
+        #sh submitqsub to submit 10 jobs in queue to roger https://wiki.ncsa.illinois.edu/display/ROGER/ROGER+User+Guide
 python reducemaps.py
-		#convert the 100 travelcost maps to attractive maps.
-		#overlap the 100 maps using the weight of each attractive map
+        #convert the 100 travelcost maps to attractive maps.
+        #overlap the 100 maps using the weight of each attractive map
 python smoothcost.py
         #interpolate the attractive map attrmap-pop.txt to attrmap-pop-interpolated.txt
         #the interpolation is done for the center cell of each 5*5 cells except the side cells.
